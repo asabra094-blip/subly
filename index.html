@@ -1,270 +1,1187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Subly | Premium Subscriptions</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#08080b">
 
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-    }
+<title>Subly | Premium Subscriptions</title>
 
-    body {
-      background: #070707;
-      color: white;
-      min-height: 100vh;
-    }
+<style>
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
 
-    .hero {
-      padding: 70px 20px 40px;
-      text-align: center;
-      background:
-        radial-gradient(circle at top, rgba(123, 44, 255, 0.25), transparent 35%),
-        linear-gradient(to bottom, #111, #070707);
-    }
+html{
+  scroll-behavior:smooth;
+}
 
-    .logo {
-      font-size: 42px;
-      font-weight: 900;
-      letter-spacing: 1px;
-      margin-bottom: 14px;
-    }
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  background:
+    radial-gradient(circle at 50% -10%,rgba(133,68,255,.22),transparent 35%),
+    #08080b;
+  color:#fff;
+  min-height:100vh;
+}
 
-    .logo span {
-      background: linear-gradient(90deg, #7c3cff, #ff2e98);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+button{
+  font:inherit;
+}
 
-    .hero h1 {
-      font-size: 34px;
-      line-height: 1.15;
-      margin-bottom: 15px;
-    }
+.header{
+  position:sticky;
+  top:0;
+  z-index:50;
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  background:rgba(8,8,11,.72);
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
 
-    .hero p {
-      color: #b9b9b9;
-      font-size: 16px;
-      max-width: 500px;
-      margin: auto;
-      line-height: 1.6;
-    }
+.nav{
+  max-width:1100px;
+  margin:auto;
+  height:72px;
+  padding:0 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
 
-    .cta {
-      display: inline-block;
-      margin-top: 25px;
-      padding: 15px 26px;
-      border-radius: 14px;
-      text-decoration: none;
-      color: white;
-      font-weight: bold;
-      background: linear-gradient(90deg, #7c3cff, #ff2e98);
-      box-shadow: 0 0 30px rgba(150, 60, 255, 0.35);
-    }
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:23px;
+  font-weight:900;
+  letter-spacing:.5px;
+}
 
-    .section {
-      padding: 35px 18px;
-      max-width: 1000px;
-      margin: auto;
-    }
+.brandIcon{
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  background:linear-gradient(135deg,#7a45ff,#ff3ba7);
+  box-shadow:0 8px 28px rgba(134,67,255,.28);
+  font-weight:900;
+}
 
-    .section h2 {
-      font-size: 26px;
-      margin-bottom: 8px;
-    }
+.brand span{
+  background:linear-gradient(90deg,#fff,#d8caff);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
 
-    .section-subtitle {
-      color: #999;
-      margin-bottom: 24px;
-    }
+.navButton{
+  color:#fff;
+  text-decoration:none;
+  font-size:14px;
+  font-weight:700;
+  padding:11px 15px;
+  background:#17171e;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:12px;
+}
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 14px;
-    }
+.hero{
+  max-width:1000px;
+  margin:auto;
+  text-align:center;
+  padding:75px 20px 45px;
+}
 
-    .card {
-      background: #111;
-      border: 1px solid #222;
-      border-radius: 18px;
-      padding: 22px 16px;
-      text-align: center;
-      transition: 0.2s;
-    }
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(153,105,255,.3);
+  background:rgba(122,69,255,.1);
+  color:#cbb8ff;
+  font-size:13px;
+  font-weight:700;
+  margin-bottom:20px;
+}
 
-    .card:hover {
-      transform: translateY(-3px);
-      border-color: #7c3cff;
-    }
+.hero h1{
+  font-size:clamp(40px,8vw,72px);
+  line-height:1.02;
+  letter-spacing:-2.5px;
+  max-width:850px;
+  margin:auto;
+}
 
-    .icon {
-      width: 70px;
-      height: 70px;
-      border-radius: 18px;
-      margin: auto;
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 26px;
-      font-weight: bold;
-      background: linear-gradient(135deg, #7c3cff, #ff2e98);
-    }
+.gradient{
+  background:linear-gradient(90deg,#9867ff,#ff58b5);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
 
-    .card h3 {
-      margin-bottom: 6px;
-    }
+.hero p{
+  color:#aaaab4;
+  max-width:580px;
+  margin:22px auto 0;
+  line-height:1.7;
+  font-size:16px;
+}
 
-    .card p {
-      color: #999;
-      font-size: 14px;
-    }
+.heroActions{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:28px;
+}
 
-    .trust {
-      margin-top: 35px;
-      background: #101010;
-      border: 1px solid #222;
-      border-radius: 20px;
-      padding: 24px;
-    }
+.primaryBtn,
+.secondaryBtn{
+  border-radius:14px;
+  padding:14px 20px;
+  font-weight:800;
+  text-decoration:none;
+  font-size:14px;
+}
 
-    .trust-item {
-      margin-bottom: 15px;
-      color: #ddd;
-    }
+.primaryBtn{
+  background:linear-gradient(135deg,#824aff,#ee3da7);
+  color:#fff;
+  box-shadow:0 14px 35px rgba(122,69,255,.28);
+}
 
-    .trust-item:last-child {
-      margin-bottom: 0;
-    }
+.secondaryBtn{
+  background:#15151b;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.09);
+}
 
-    .payment {
-      margin-top: 30px;
-      padding: 25px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #171717, #0e0e0e);
-      border: 1px solid #2a2a2a;
-    }
+.trustRow{
+  max-width:850px;
+  margin:25px auto 0;
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  flex-wrap:wrap;
+  color:#8f8f99;
+  font-size:13px;
+}
 
-    .payment strong {
-      color: #ff375f;
-    }
+.section{
+  max-width:1100px;
+  padding:35px 18px 70px;
+  margin:auto;
+}
 
-    footer {
-      text-align: center;
-      color: #666;
-      padding: 35px 20px;
-      font-size: 13px;
-    }
+.sectionTop{
+  margin-bottom:24px;
+}
 
-    @media (min-width: 700px) {
-      .grid {
-        grid-template-columns: repeat(4, 1fr);
-      }
+.sectionTop h2{
+  font-size:30px;
+  letter-spacing:-.7px;
+}
 
-      .hero h1 {
-        font-size: 52px;
-      }
-    }
-  </style>
+.sectionTop p{
+  margin-top:8px;
+  color:#96969f;
+  font-size:15px;
+}
+
+.apps{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:14px;
+}
+
+.appCard{
+  position:relative;
+  overflow:hidden;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:22px;
+  padding:20px 15px;
+  min-height:180px;
+  color:#fff;
+  cursor:pointer;
+  transition:.22s ease;
+  text-align:left;
+}
+
+.appCard:active{
+  transform:scale(.97);
+}
+
+.appCard:hover{
+  transform:translateY(-4px);
+  border-color:rgba(154,99,255,.45);
+}
+
+.appLogoWrap{
+  height:72px;
+  display:flex;
+  align-items:center;
+}
+
+.appLogo{
+  width:62px;
+  height:62px;
+  border-radius:15px;
+  object-fit:contain;
+  padding:5px;
+  background:#fff;
+}
+
+.darkLogo{
+  background:#111;
+}
+
+.appCard h3{
+  margin-top:14px;
+  font-size:18px;
+}
+
+.appCard p{
+  margin-top:5px;
+  color:#92929c;
+  font-size:13px;
+}
+
+.arrow{
+  position:absolute;
+  right:15px;
+  bottom:15px;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:rgba(255,255,255,.07);
+  color:#bbb;
+}
+
+.infoBox{
+  margin-top:38px;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+}
+
+.infoItem{
+  background:#111118;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  padding:20px;
+}
+
+.infoIcon{
+  font-size:24px;
+  margin-bottom:10px;
+}
+
+.infoItem h4{
+  font-size:15px;
+}
+
+.infoItem p{
+  color:#8e8e98;
+  font-size:13px;
+  margin-top:5px;
+  line-height:1.5;
+}
+
+.payment{
+  margin-top:15px;
+  border-radius:20px;
+  background:
+    linear-gradient(135deg,rgba(255,54,92,.1),rgba(255,255,255,.02));
+  border:1px solid rgba(255,73,105,.2);
+  padding:22px;
+}
+
+.payment small{
+  color:#8c8c95;
+}
+
+.payment h3{
+  margin-top:5px;
+  font-size:20px;
+}
+
+.paymentNumber{
+  margin-top:13px;
+  font-size:27px;
+  font-weight:900;
+  letter-spacing:1px;
+}
+
+.footer{
+  text-align:center;
+  padding:25px 20px 45px;
+  color:#676771;
+  font-size:12px;
+}
+
+/* MODAL */
+
+.overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.75);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  z-index:100;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+}
+
+.overlay.show{
+  display:flex;
+}
+
+.modal{
+  background:#111117;
+  width:100%;
+  max-width:600px;
+  max-height:88vh;
+  overflow-y:auto;
+  border-radius:28px 28px 0 0;
+  border:1px solid rgba(255,255,255,.1);
+  padding:22px;
+  animation:slideUp .25s ease;
+}
+
+@keyframes slideUp{
+  from{transform:translateY(100px);opacity:0}
+  to{transform:translateY(0);opacity:1}
+}
+
+.modalHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:15px;
+}
+
+.modalApp{
+  display:flex;
+  align-items:center;
+  gap:13px;
+}
+
+.modalLogo{
+  width:55px;
+  height:55px;
+  border-radius:14px;
+  object-fit:contain;
+  padding:4px;
+  background:#fff;
+}
+
+.modalApp h2{
+  font-size:22px;
+}
+
+.modalApp p{
+  color:#8f8f98;
+  font-size:13px;
+  margin-top:4px;
+}
+
+.close{
+  border:0;
+  background:#22222a;
+  color:#fff;
+  width:37px;
+  height:37px;
+  border-radius:50%;
+  font-size:19px;
+}
+
+.step{
+  margin-top:25px;
+}
+
+.stepTitle{
+  font-size:14px;
+  color:#bcbcc5;
+  margin-bottom:12px;
+  font-weight:700;
+}
+
+.choices{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+
+.choice{
+  border:1px solid rgba(255,255,255,.09);
+  background:#18181f;
+  color:#fff;
+  border-radius:14px;
+  padding:14px 10px;
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+}
+
+.choice.selected{
+  border-color:#955dff;
+  background:rgba(137,75,255,.16);
+  box-shadow:inset 0 0 0 1px rgba(151,93,255,.15);
+}
+
+.durationChoices{
+  grid-template-columns:repeat(3,1fr);
+}
+
+.whatsapp{
+  width:100%;
+  margin-top:24px;
+  border:0;
+  border-radius:16px;
+  padding:16px;
+  font-weight:900;
+  font-size:15px;
+  background:#25D366;
+  color:#06180c;
+  opacity:.45;
+  pointer-events:none;
+}
+
+.whatsapp.ready{
+  opacity:1;
+  pointer-events:auto;
+}
+
+.summary{
+  display:none;
+  margin-top:22px;
+  border-radius:16px;
+  padding:16px;
+  background:#17171e;
+  border:1px solid rgba(255,255,255,.07);
+}
+
+.summary.show{
+  display:block;
+}
+
+.summary small{
+  color:#85858f;
+}
+
+.summary p{
+  margin-top:7px;
+  line-height:1.6;
+  font-size:14px;
+}
+
+@media(min-width:700px){
+  .apps{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .infoBox{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .overlay{
+    align-items:center;
+  }
+
+  .modal{
+    border-radius:28px;
+  }
+}
+
+@media(min-width:950px){
+  .apps{
+    grid-template-columns:repeat(4,1fr);
+  }
+}
+</style>
 </head>
 
 <body>
 
-  <section class="hero">
-    <div class="logo">SUB<span>LY</span></div>
+<header class="header">
+  <div class="nav">
+    <div class="brand">
+      <div class="brandIcon">S</div>
+      <span>SUBLY</span>
+    </div>
 
-    <h1>Your Favorite Subscriptions.<br>All in One Place.</h1>
-
-    <p>
-      Fast activation, trusted service and great prices.
-      Choose your favorite subscription and order directly through WhatsApp.
-    </p>
-
-    <a class="cta" href="https://wa.me/96176408625">
-      Order on WhatsApp
+    <a class="navButton"
+       href="https://wa.me/96179372399">
+      WhatsApp
     </a>
-  </section>
+  </div>
+</header>
 
-  <section class="section">
-    <h2>Our Subscriptions</h2>
-    <p class="section-subtitle">Choose what you want and contact us for available plans.</p>
+<section class="hero">
 
-    <div class="grid">
-      <div class="card">
-        <div class="icon">N</div>
-        <h3>Netflix</h3>
-        <p>Movies & series</p>
+  <div class="badge">
+    ✦ Premium digital subscriptions
+  </div>
+
+  <h1>
+    All your subscriptions.
+    <span class="gradient">One place.</span>
+  </h1>
+
+  <p>
+    Choose your favorite service, select the plan you want
+    and continue directly to WhatsApp for pricing and availability.
+  </p>
+
+  <div class="heroActions">
+    <a href="#subscriptions" class="primaryBtn">
+      Browse subscriptions
+    </a>
+
+    <a href="https://wa.me/96179372399"
+       class="secondaryBtn">
+      Contact us
+    </a>
+  </div>
+
+  <div class="trustRow">
+    <span>⚡ Fast activation</span>
+    <span>🔒 Trusted service</span>
+    <span>💬 WhatsApp support</span>
+  </div>
+
+</section>
+
+<section id="subscriptions" class="section">
+
+  <div class="sectionTop">
+    <h2>Choose a subscription</h2>
+    <p>Tap a service to view the available plans.</p>
+  </div>
+
+  <div class="apps">
+
+    <button class="appCard" onclick="openApp('Netflix')">
+      <div class="appLogoWrap">
+        <img class="appLogo darkLogo"
+             src="https://www.google.com/s2/favicons?domain=netflix.com&sz=128">
       </div>
+      <h3>Netflix</h3>
+      <p>Movies, series & originals</p>
+      <div class="arrow">›</div>
+    </button>
 
-      <div class="card">
-        <div class="icon">S</div>
-        <h3>Shahid</h3>
-        <p>Arabic entertainment</p>
+    <button class="appCard" onclick="openApp('Shahid')">
+      <div class="appLogoWrap">
+        <img class="appLogo"
+             src="https://www.google.com/s2/favicons?domain=shahid.mbc.net&sz=128">
       </div>
+      <h3>Shahid</h3>
+      <p>Arabic movies & series</p>
+      <div class="arrow">›</div>
+    </button>
 
-      <div class="card">
-        <div class="icon">OSN</div>
-        <h3>OSN+</h3>
-        <p>Premium streaming</p>
+    <button class="appCard" onclick="openApp('OSN+')">
+      <div class="appLogoWrap">
+        <img class="appLogo"
+             src="https://www.google.com/s2/favicons?domain=osnplus.com&sz=128">
       </div>
+      <h3>OSN+</h3>
+      <p>Premium streaming</p>
+      <div class="arrow">›</div>
+    </button>
 
-      <div class="card">
-        <div class="icon">TOD</div>
-        <h3>TOD</h3>
-        <p>Sports & entertainment</p>
+    <button class="appCard" onclick="openApp('Anghami')">
+      <div class="appLogoWrap">
+        <img class="appLogo darkLogo"
+             src="https://www.google.com/s2/favicons?domain=anghami.com&sz=128">
       </div>
+      <h3>Anghami</h3>
+      <p>Music & podcasts</p>
+      <div class="arrow">›</div>
+    </button>
 
-      <div class="card">
-        <div class="icon">A</div>
-        <h3>Anghami</h3>
-        <p>Music subscriptions</p>
+    <button class="appCard" onclick="openApp('Prime Video')">
+      <div class="appLogoWrap">
+        <img class="appLogo"
+             src="https://www.google.com/s2/favicons?domain=primevideo.com&sz=128">
       </div>
+      <h3>Prime Video</h3>
+      <p>Movies & Amazon Originals</p>
+      <div class="arrow">›</div>
+    </button>
 
-      <div class="card">
-        <div class="icon">D+</div>
-        <h3>Disney+</h3>
-        <p>Movies & originals</p>
+    <button class="appCard" onclick="openApp('WATCH IT')">
+      <div class="appLogoWrap">
+        <img class="appLogo darkLogo"
+             src="https://www.google.com/s2/favicons?domain=watchit.com&sz=128">
       </div>
+      <h3>WATCH IT</h3>
+      <p>Arabic entertainment</p>
+      <div class="arrow">›</div>
+    </button>
 
-      <div class="card">
-        <div class="icon">P</div>
-        <h3>Prime Video</h3>
-        <p>Movies & shows</p>
+    <button class="appCard" onclick="openApp('Disney+')">
+      <div class="appLogoWrap">
+        <img class="appLogo"
+             src="https://www.google.com/s2/favicons?domain=disneyplus.com&sz=128">
       </div>
+      <h3>Disney+</h3>
+      <p>Disney, Marvel, Pixar & more</p>
+      <div class="arrow">›</div>
+    </button>
 
-      <div class="card">
-        <div class="icon">+</div>
-        <h3>More</h3>
-        <p>Ask us for other services</p>
+    <button class="appCard" onclick="openApp('Crunchyroll')">
+      <div class="appLogoWrap">
+        <img class="appLogo"
+             src="https://www.google.com/s2/favicons?domain=crunchyroll.com&sz=128">
       </div>
+      <h3>Crunchyroll</h3>
+      <p>Anime streaming</p>
+      <div class="arrow">›</div>
+    </button>
+
+    <button class="appCard" onclick="openApp('Spotify')">
+      <div class="appLogoWrap">
+        <img class="appLogo darkLogo"
+             src="https://www.google.com/s2/favicons?domain=spotify.com&sz=128">
+      </div>
+      <h3>Spotify</h3>
+      <p>Premium music streaming</p>
+      <div class="arrow">›</div>
+    </button>
+
+  </div>
+
+
+  <div class="infoBox">
+
+    <div class="infoItem">
+      <div class="infoIcon">⚡</div>
+      <h4>Fast activation</h4>
+      <p>Contact us and we'll help get your subscription activated quickly.</p>
     </div>
 
-    <div class="trust">
-      <div class="trust-item">⚡ Fast activation</div>
-      <div class="trust-item">🔒 Trusted service</div>
-      <div class="trust-item">💬 Direct WhatsApp support</div>
-      <div class="trust-item">💳 Easy payment with Whish Money</div>
+    <div class="infoItem">
+      <div class="infoIcon">💬</div>
+      <h4>Direct support</h4>
+      <p>Orders and support are handled directly through WhatsApp.</p>
     </div>
 
-    <div class="payment">
-      <h2>Payment</h2>
-      <p style="margin-top:10px;color:#aaa;">
-        Pay securely using <strong>Whish Money</strong>
-      </p>
-      <p style="margin-top:8px;font-size:24px;font-weight:bold;">
-        76 408 625
-      </p>
+    <div class="infoItem">
+      <div class="infoIcon">🔐</div>
+      <h4>Trusted service</h4>
+      <p>Simple ordering with clear subscription options.</p>
     </div>
-  </section>
 
-  <footer>
-    © 2026 Subly. All rights reserved.
-  </footer>
+  </div>
+
+  <div class="payment">
+    <small>Payment available via</small>
+    <h3>Whish Money</h3>
+    <div class="paymentNumber">79 372 399</div>
+  </div>
+
+</section>
+
+<footer class="footer">
+  © 2026 Subly. All rights reserved.
+</footer>
+
+
+<!-- Subscription Modal -->
+
+<div id="overlay" class="overlay" onclick="outsideClose(event)">
+
+  <div class="modal">
+
+    <div class="modalHeader">
+
+      <div class="modalApp">
+
+        <img id="modalLogo"
+             class="modalLogo">
+
+        <div>
+          <h2 id="modalName"></h2>
+          <p>Select your subscription</p>
+        </div>
+
+      </div>
+
+      <button class="close" onclick="closeModal()">×</button>
+
+    </div>
+
+
+    <div id="accountStep" class="step">
+
+      <div class="stepTitle">
+        Choose account type
+      </div>
+
+      <div id="accountChoices"
+           class="choices">
+      </div>
+
+    </div>
+
+
+    <div id="durationStep"
+         class="step">
+
+      <div class="stepTitle">
+        Choose duration
+      </div>
+
+      <div id="durationChoices"
+           class="choices durationChoices">
+      </div>
+
+    </div>
+
+
+    <div id="summary"
+         class="summary">
+
+      <small>Your selection</small>
+
+      <p id="summaryText"></p>
+
+    </div>
+
+
+    <button id="whatsappButton"
+            class="whatsapp"
+            onclick="orderWhatsapp()">
+
+      Continue on WhatsApp
+
+    </button>
+
+  </div>
+
+</div>
+
+
+<script>
+
+const phone = "96179372399";
+
+const products = {
+
+  "Netflix":{
+    domain:"netflix.com",
+
+    accounts:{
+      "1 User":[
+        "1 Month",
+        "3 Months",
+        "6 Months",
+        "1 Year"
+      ],
+
+      "Full Account":[
+        "1 Month",
+        "2 Months",
+        "3 Months",
+        "4 Months",
+        "5 Months",
+        "6 Months",
+        "7 Months",
+        "8 Months",
+        "9 Months",
+        "10 Months",
+        "11 Months",
+        "12 Months"
+      ]
+    }
+  },
+
+
+  "Shahid":{
+    domain:"shahid.mbc.net",
+
+    accounts:{
+      "1 User":[
+        "1 Month",
+        "3 Months"
+      ],
+
+      "Full Account":[
+        "1 Month",
+        "3 Months"
+      ]
+    }
+  },
+
+
+  "OSN+":{
+    domain:"osnplus.com",
+
+    accounts:{
+      "1 User":[
+        "1 Month",
+        "1 Year"
+      ],
+
+      "Full Account":[
+        "1 Month",
+        "1 Year"
+      ]
+    }
+  },
+
+
+  "Anghami":{
+    domain:"anghami.com",
+
+    durations:[
+      "3 Months",
+      "6 Months",
+      "1 Year"
+    ]
+  },
+
+
+  "Prime Video":{
+    domain:"primevideo.com",
+
+    durations:[
+      "1 Month",
+      "6 Months"
+    ]
+  },
+
+
+  "WATCH IT":{
+    domain:"watchit.com",
+
+    durations:[
+      "1 Month",
+      "1 Year"
+    ]
+  },
+
+
+  "Crunchyroll":{
+    domain:"crunchyroll.com",
+
+    accounts:{
+      "1 User":[
+        "1 Month",
+        "1 Year"
+      ],
+
+      "Full Account":[
+        "1 Month",
+        "1 Year"
+      ]
+    }
+  },
+
+
+  "Disney+":{
+    domain:"disneyplus.com",
+
+    accounts:{
+      "1 User":[
+        "1 Month",
+        "6 Months",
+        "1 Year"
+      ]
+    }
+  },
+
+
+  "Spotify":{
+    domain:"spotify.com",
+
+    durations:[
+      "1 Month",
+      "1 Year"
+    ]
+  }
+
+};
+
+
+let selectedApp = null;
+let selectedAccount = null;
+let selectedDuration = null;
+
+
+function openApp(name){
+
+  selectedApp = name;
+  selectedAccount = null;
+  selectedDuration = null;
+
+  const product = products[name];
+
+  document.getElementById("modalName").innerText = name;
+
+  document.getElementById("modalLogo").src =
+  "https://www.google.com/s2/favicons?domain=" +
+  product.domain +
+  "&sz=128";
+
+
+  const accountStep =
+  document.getElementById("accountStep");
+
+  const accountChoices =
+  document.getElementById("accountChoices");
+
+  accountChoices.innerHTML = "";
+
+
+  if(product.accounts){
+
+    accountStep.style.display = "block";
+
+    Object.keys(product.accounts).forEach(account=>{
+
+      const button =
+      document.createElement("button");
+
+      button.className = "choice";
+
+      button.innerText = account;
+
+      button.onclick = ()=>selectAccount(account,button);
+
+      accountChoices.appendChild(button);
+
+    });
+
+    document.getElementById("durationChoices").innerHTML = "";
+
+  }
+
+  else{
+
+    accountStep.style.display = "none";
+
+    loadDurations(product.durations);
+
+  }
+
+
+  updateSummary();
+
+  document.getElementById("overlay")
+  .classList.add("show");
+
+  document.body.style.overflow="hidden";
+
+}
+
+
+function selectAccount(account,button){
+
+  selectedAccount = account;
+  selectedDuration = null;
+
+  document
+  .querySelectorAll("#accountChoices .choice")
+  .forEach(btn=>btn.classList.remove("selected"));
+
+  button.classList.add("selected");
+
+  loadDurations(
+    products[selectedApp].accounts[account]
+  );
+
+  updateSummary();
+
+}
+
+
+function loadDurations(durations){
+
+  const box =
+  document.getElementById("durationChoices");
+
+  box.innerHTML = "";
+
+  durations.forEach(duration=>{
+
+    const button =
+    document.createElement("button");
+
+    button.className="choice";
+
+    button.innerText=duration;
+
+    button.onclick=()=>selectDuration(duration,button);
+
+    box.appendChild(button);
+
+  });
+
+}
+
+
+function selectDuration(duration,button){
+
+  selectedDuration=duration;
+
+  document
+  .querySelectorAll("#durationChoices .choice")
+  .forEach(btn=>btn.classList.remove("selected"));
+
+  button.classList.add("selected");
+
+  updateSummary();
+
+}
+
+
+function updateSummary(){
+
+  const summary =
+  document.getElementById("summary");
+
+  const summaryText =
+  document.getElementById("summaryText");
+
+  const whatsapp =
+  document.getElementById("whatsappButton");
+
+
+  let ready=false;
+
+
+  if(products[selectedApp]?.accounts){
+
+    ready =
+    selectedAccount &&
+    selectedDuration;
+
+  }
+
+  else{
+
+    ready =
+    selectedDuration;
+
+  }
+
+
+  if(ready){
+
+    let text =
+    "<strong>" +
+    selectedApp +
+    "</strong><br>";
+
+    if(selectedAccount){
+
+      text +=
+      "Account: " +
+      selectedAccount +
+      "<br>";
+
+    }
+
+    text +=
+    "Duration: " +
+    selectedDuration;
+
+
+    summaryText.innerHTML=text;
+
+    summary.classList.add("show");
+
+    whatsapp.classList.add("ready");
+
+  }
+
+  else{
+
+    summary.classList.remove("show");
+
+    whatsapp.classList.remove("ready");
+
+  }
+
+}
+
+
+function orderWhatsapp(){
+
+  if(!selectedApp || !selectedDuration) return;
+
+
+  let message =
+  "Hi Subly 👋\n\n" +
+  "I'm interested in this subscription:\n\n" +
+  "📱 App: " +
+  selectedApp +
+  "\n";
+
+
+  if(selectedAccount){
+
+    message +=
+    "👤 Account: " +
+    selectedAccount +
+    "\n";
+
+  }
+
+
+  message +=
+  "📅 Duration: " +
+  selectedDuration +
+  "\n\n" +
+  "Can you send me the price and availability?";
+
+
+  const url =
+  "https://wa.me/" +
+  phone +
+  "?text=" +
+  encodeURIComponent(message);
+
+
+  window.open(url,"_blank");
+
+}
+
+
+function closeModal(){
+
+  document
+  .getElementById("overlay")
+  .classList.remove("show");
+
+  document.body.style.overflow="";
+
+}
+
+
+function outsideClose(event){
+
+  if(event.target.id==="overlay"){
+
+    closeModal();
+
+  }
+
+}
+
+</script>
 
 </body>
 </html>

@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#08080c">
+
+<title>Subly | Reseller Login</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #07070b;
+  --card: #111118;
+  --card2: #17171f;
+  --text: #ffffff;
+  --muted: #92929d;
+  --purple: #9b5cff;
+  --pink: #ff3fa4;
+  --border: rgba(255,255,255,.09);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(143,78,255,.25), transparent 35%),
+    radial-gradient(circle at 90% 80%, rgba(255,54,160,.12), transparent 30%),
+    var(--bg);
+
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 22px;
+}
+
+.page {
+  width: 100%;
+  max-width: 430px;
+}
+
+.logoArea {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.logo {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 15px 50px rgba(143,78,255,.25);
+
+  margin-bottom: 16px;
+}
+
+.brand {
+  font-size: 31px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.brand span {
+  background: linear-gradient(90deg, var(--purple), var(--pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 7px;
+}
+
+.card {
+  background: rgba(17,17,24,.88);
+  border: 1px solid var(--border);
+  border-radius: 25px;
+
+  padding: 26px;
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  box-shadow: 0 25px 70px rgba(0,0,0,.35);
+}
+
+.card h1 {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.cardDescription {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.field {
+  margin-bottom: 15px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #d4d4dc;
+}
+
+.inputWrap {
+  position: relative;
+}
+
+input {
+  width: 100%;
+  height: 52px;
+
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  background: #17171f;
+  color: white;
+
+  padding: 0 15px;
+
+  font-size: 15px;
+  outline: none;
+
+  transition: .2s;
+}
+
+input:focus {
+  border-color: #945dff;
+  box-shadow: 0 0 0 3px rgba(148,93,255,.10);
+}
+
+input::placeholder {
+  color: #686872;
+}
+
+.passwordInput {
+  padding-right: 60px;
+}
+
+.showPassword {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  border: 0;
+  background: transparent;
+  color: #a7a7b1;
+
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px;
+
+  cursor: pointer;
+}
+
+.loginButton {
+  width: 100%;
+  height: 53px;
+
+  border: 0;
+  border-radius: 15px;
+
+  color: white;
+  font-size: 15px;
+  font-weight: 900;
+
+  margin-top: 7px;
+
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+
+  box-shadow: 0 12px 35px rgba(148,93,255,.22);
+
+  cursor: pointer;
+  transition: .2s;
+}
+
+.loginButton:active {
+  transform: scale(.98);
+}
+
+.loginButton:disabled {
+  opacity: .55;
+  cursor: default;
+  transform: none;
+}
+
+.message {
+  display: none;
+  margin-top: 16px;
+
+  border-radius: 13px;
+  padding: 12px 14px;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.message.error {
+  display: block;
+  background: rgba(255,70,90,.09);
+  border: 1px solid rgba(255,70,90,.22);
+  color: #ff9baa;
+}
+
+.message.success {
+  display: block;
+  background: rgba(55,215,130,.08);
+  border: 1px solid rgba(55,215,130,.20);
+  color: #8ce7b4;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 23px 0;
+}
+
+.noAccount {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.contact {
+  display: inline-block;
+  margin-top: 12px;
+
+  text-decoration: none;
+  color: white;
+
+  border: 1px solid var(--border);
+  background: #18181f;
+
+  border-radius: 12px;
+  padding: 11px 15px;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.back {
+  display: block;
+  width: max-content;
+
+  margin: 22px auto 0;
+
+  color: #85858f;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.security {
+  margin-top: 22px;
+  text-align: center;
+  font-size: 11px;
+  color: #666670;
+}
+
+.loader {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: white;
+
+  border-radius: 50%;
+
+  animation: spin .7s linear infinite;
+
+  vertical-align: middle;
+  margin-right: 7px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    align-items: flex-start;
+    padding-top: 55px;
+  }
+
+  .card {
+    padding: 22px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="page">
+
+  <div class="logoArea">
+    <img
+      src="subly-logo.png.PNG"
+      class="logo"
+      alt="Subly"
+    >
+
+    <div class="brand">
+      SUB<span>LY</span>
+    </div>
+
+    <div class="subtitle">
+      Reseller Portal
+    </div>
+  </div>
+
+
+  <div class="card">
+
+    <h1>Welcome back 👋</h1>
+
+    <p class="cardDescription">
+      Sign in to manage your Subly reseller account, wallet and orders.
+    </p>
+
+
+    <form id="loginForm">
+
+      <div class="field">
+        <label>Email</label>
+
+        <input
+          id="email"
+          type="email"
+          placeholder="your@email.com"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+
+      <div class="field">
+        <label>Password</label>
+
+        <div class="inputWrap">
+
+          <input
+            id="password"
+            class="passwordInput"
+            type="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            required
+          >
+
+          <button
+            type="button"
+            class="showPassword"
+            id="showPassword"
+          >
+            SHOW
+          </button>
+
+        </div>
+      </div>
+
+
+      <button
+        id="loginButton"
+        class="loginButton"
+        type="submit"
+      >
+        Sign In
+      </button>
+
+
+      <div
+        id="message"
+        class="message"
+      ></div>
+
+    </form>
+
+
+    <div class="divider"></div>
+
+
+    <div class="noAccount">
+
+      Reseller accounts are invitation-only.<br>
+      Contact Subly if you'd like to become a reseller.
+
+      <br>
+
+      <a
+        class="contact"
+        href="https://wa.me/96179372399?text=Hi%20Subly%20%F0%9F%91%8B%0AI%27m%20interested%20in%20becoming%20a%20reseller."
+      >
+        💬 Contact Subly
+      </a>
+
+    </div>
+
+  </div>
+
+
+  <a
+    href="index.html"
+    class="back"
+  >
+    ← Back to Subly
+  </a>
+
+
+  <div class="security">
+    🔒 Secure reseller access powered by Supabase
+  </div>
+
+</div>
+
+
+<script>
+
+/* ============================================
+   SUPABASE CONNECTION
+============================================ */
+
+const SUPABASE_URL =
+  "https://ymcvuwovcrqbhurhjerd.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_Hu2aLWbK4YjkTPevo6TRtw_dRO4BIPc";
+
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+  );
+
+
+/* ============================================
+   ELEMENTS
+============================================ */
+
+const loginForm =
+  document.getElementById("loginForm");
+
+const emailInput =
+  document.getElementById("email");
+
+const passwordInput =
+  document.getElementById("password");
+
+const loginButton =
+  document.getElementById("loginButton");
+
+const messageBox =
+  document.getElementById("message");
+
+const showPasswordButton =
+  document.getElementById("showPassword");
+
+
+/* ============================================
+   SHOW / HIDE PASSWORD
+============================================ */
+
+showPasswordButton.addEventListener(
+  "click",
+  () => {
+
+    const hidden =
+      passwordInput.type === "password";
+
+    passwordInput.type =
+      hidden ? "text" : "password";
+
+    showPasswordButton.innerText =
+      hidden ? "HIDE" : "SHOW";
+
+  }
+);
+
+
+/* ============================================
+   MESSAGE
+============================================ */
+
+function showMessage(text, type = "error") {
+
+  messageBox.className =
+    "message " + type;
+
+  messageBox.innerText = text;
+
+}
+
+function clearMessage() {
+
+  messageBox.className = "message";
+  messageBox.innerText = "";
+
+}
+
+
+/* ============================================
+   BUTTON LOADING
+============================================ */
+
+function setLoading(loading) {
+
+  loginButton.disabled = loading;
+
+  if (loading) {
+
+    loginButton.innerHTML =
+      '<span class="loader"></span>Signing in...';
+
+  } else {
+
+    loginButton.innerText =
+      "Sign In";
+
+  }
+
+}
+
+
+/* ============================================
+   LOAD USER PROFILE
+============================================ */
+
+async function getProfile(userId) {
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from("profiles")
+      .select(
+        "id,email,username,business_name,role,tier,status"
+      )
+      .eq("id", userId)
+      .single();
+
+
+  if (error) {
+
+    console.error(
+      "Profile error:",
+      error
+    );
+
+    return null;
+
+  }
+
+
+  return data;
+
+}
+
+
+/* ============================================
+   ROUTE USER
+============================================ */
+
+async function routeUser(user) {
+
+  const profile =
+    await getProfile(user.id);
+
+
+  if (!profile) {
+
+    await supabaseClient.auth.signOut();
+
+    showMessage(
+      "We couldn't find your Subly profile. Please contact support."
+    );
+
+    return;
+
+  }
+
+
+  if (profile.status === "inactive") {
+
+    await supabaseClient.auth.signOut();
+
+    showMessage(
+      "Your reseller account has not been activated yet. Please contact Subly."
+    );
+
+    return;
+
+  }
+
+
+  if (profile.status === "suspended") {
+
+    await supabaseClient.auth.signOut();
+
+    showMessage(
+      "This account is currently suspended. Please contact Subly support."
+    );
+
+    return;
+
+  }
+
+
+  if (profile.role === "admin") {
+
+    showMessage(
+      "Admin access confirmed. Redirecting...",
+      "success"
+    );
+
+    setTimeout(() => {
+      window.location.href =
+        "admin.html";
+    }, 500);
+
+    return;
+
+  }
+
+
+  if (profile.role === "reseller") {
+
+    showMessage(
+      "Welcome back! Redirecting...",
+      "success"
+    );
+
+    setTimeout(() => {
+      window.location.href =
+        "reseller.html";
+    }, 500);
+
+    return;
+
+  }
+
+
+  await supabaseClient.auth.signOut();
+
+  showMessage(
+    "Your account doesn't have permission to access this portal."
+  );
+
+}
+
+
+/* ============================================
+   LOGIN
+============================================ */
+
+loginForm.addEventListener(
+  "submit",
+  async (event) => {
+
+    event.preventDefault();
+
+    clearMessage();
+    setLoading(true);
+
+
+    const email =
+      emailInput.value
+        .trim()
+        .toLowerCase();
+
+    const password =
+      passwordInput.value;
+
+
+    try {
+
+      const {
+        data,
+        error
+      } =
+        await supabaseClient.auth
+          .signInWithPassword({
+            email,
+            password
+          });
+
+
+      if (error) {
+
+        showMessage(
+          "Incorrect email or password."
+        );
+
+        return;
+
+      }
+
+
+      if (!data.user) {
+
+        showMessage(
+          "Unable to sign in. Please try again."
+        );
+
+        return;
+
+      }
+
+
+      await routeUser(
+        data.user
+      );
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      showMessage(
+        "Something went wrong. Please try again."
+      );
+
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  }
+);
+
+
+/* ============================================
+   ALREADY SIGNED IN?
+============================================ */
+
+async function checkExistingSession() {
+
+  const {
+    data
+  } =
+    await supabaseClient.auth
+      .getSession();
+
+
+  if (
+    data &&
+    data.session &&
+    data.session.user
+  ) {
+
+    setLoading(true);
+
+    await routeUser(
+      data.session.user
+    );
+
+    setLoading(false);
+
+  }
+
+}
+
+
+checkExistingSession();
+
+</script>
+
+</body>
+</html>

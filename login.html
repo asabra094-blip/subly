@@ -829,6 +829,35 @@ async function checkExistingSession(){
 
 checkExistingSession();
 
+  const DEBUG = true;
+
+function debug(message, data = null) {
+  if (!DEBUG) return;
+
+  if (data !== null) {
+    console.log("[SUBLY] " + message, data);
+  } else {
+    console.log("[SUBLY] " + message);
+  }
+}
+
+function debugError(message, error) {
+  console.error("[SUBLY ERROR] " + message, error);
+}
+
+window.addEventListener("error", (event) => {
+  debugError("JavaScript error", {
+    message: event.message,
+    file: event.filename,
+    line: event.lineno
+  });
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  debugError("Promise error", event.reason);
+});
+
+debug("Debug system started");
 </script>
 
 </body>

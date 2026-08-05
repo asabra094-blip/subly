@@ -1429,6 +1429,10 @@ if (pageName === "resellers") {
   loadResellers();
 }
 
+if (pageName === "orders") {
+  loadOrders();
+}
+
 }
 
 
@@ -1770,6 +1774,631 @@ async function createReseller() {
       "Create Reseller";
 
   }
+}
+  /* =========================
+   ORDERS
+========================= */
+
+function formatDate(value) {
+
+  if (!value) return "—";
+
+  return new Date(value).toLocaleDateString(
+    undefined,
+    {
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    }
+  );
+}
+
+
+async function loadOrders() {
+
+  const ordersContainer =
+    document.getElementById("ordersList");
+
+  const renewalsContainer =
+    document.getElementById("renewalsList");
+
+
+  if (!ordersContainer || !renewalsContainer) {
+    console.error("[SUBLY] Orders containers missing");
+    return;
+  }
+
+
+  ordersContainer.innerHTML = `
+    <div class="empty">
+      <div class="empty-icon">🛒</div>
+      <div>Loading orders...</div>
+    </div>
+  `;
+
+
+  renewalsContainer.innerHTML = `
+    <div class="empty">
+      <div class="empty-icon">🔁</div>
+      <div>Loading renewals...</div>
+    </div>
+  `;
+
+
+  console.log("[SUBLY] Loading orders...");
+
+
+  try {
+
+    /* =========================
+       SUBSCRIPTION ORDERS
+    ========================= */
+
+    const {
+      data: orders,
+      error: ordersError
+    } =
+      await supabaseClient
+        .from("orders")
+        .select(`
+          id,
+          user_id,
+          product_id,
+          status,
+          created_at,
+          activated_at,
+          expires_at,
+          delivery_url,
+          delivery_text
+        `)
+        .order("created_at", {
+          ascending: false
+        });
+
+
+    if (ordersError) {
+
+      console.error(
+        "[SUBLY] Orders error:",
+        ordersError
+      );
+
+      ordersContainer.innerHTML = `
+        <div class="empty">
+          Could not load orders.
+        </div>
+      `;
+
+    } else {
+
+      const orderUserIds =
+        [...new Set(
+          (orders || [])
+            .map(order => order.user_id)
+            .filter(Boolean)
+        )];
+
+      const orderProductIds =
+        [...new Set(
+          (orders || [])
+            .map(order => order.product_id)
+            .filter(Boolean)
+        )];
+
+
+      let profiles = [];
+      let products = [];
+
+
+      if (orderUserIds.length) {
+
+        const { data } =
+          await supabaseClient
+            .from("profiles")
+            .select(
+              "id,username,business_name"
+            )
+            .in("id", orderUserIds);
+
+        profiles = data || [];
+      }
+
+
+      if (orderProductIds.length) {
+
+        const { data } =
+          await supabaseClient
+            .from("products")
+            .select(
+              "id,app_name,account_type,duration"
+            )
+            .in("id", orderProductIds);
+
+        products = data || [];
+      }
+
+
+      if (!orders || orders.length === 0) {
+
+        ordersContainer.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🛒</div>
+            <div>No subscription orders yet.</div>
+          </div>
+        `;
+
+      } else {
+
+        ordersContainer.innerHTML =
+          orders.map(order => {
+
+            const reseller =
+              profiles.find(
+                profile =>
+                  profile.id === order.user_id
+              );
+
+            const product =
+              products.find(
+                item =>
+                  item.id === order.product_id
+              );
+
+
+            const productName =
+              product?.app_name ||
+              "Unknown product";
+
+            const type =
+              product?.account_type ||
+              "—";
+
+            const duration =
+              product?.duration ||
+              "—";
+
+            const resellerName =
+              reseller?.business_name ||
+              reseller?.username ||
+              "Unknown reseller";
+
+
+            return `
+              <div class="order-card">
+
+                <div class="order-top">
+
+                  <div>
+
+                    <div class="order-number">
+                      Order • ${order.id.slice(0, 8)}
+                    </div>
+
+                    <div class="order-name">
+                      ${productName}
+                    </div>
+
+                    <div class="order-reseller">
+                      ${resellerName}
+                    </div>
+
+                  </div>
+
+                  <span class="status-badge ${order.status}">
+                    ${order.status || "unknown"}
+                  </span>
+
+                </div>
+
+
+                <div class="order-details">
+
+                  <div class="order-detail">
+                    <div class="order-detail-label">
+                      Account Type
+                    </div>
+
+                    <div class="order-detail-value">
+                      ${type}
+                    </div>
+                  </div>
+
+
+                  <div class="order-detail">
+                    <div class="order-detail-label">
+                      Duration
+                    </div>
+
+                    <div class="order-detail-value">
+                      ${duration}
+                    </div>
+                  </div>
+
+
+                  <div class="order-detail">
+                    <div class="order-detail-label">
+                      Activated
+                    </div>
+
+                    <div class="order-detail-value">
+                      ${formatDate(order.activated_at)}
+                    </div>
+                  </div>
+
+
+                  <div class="order-detail">
+                    <div class="order-detail-label">
+                      Expires
+                    </div>
+
+                    <div class="order-detail-value">
+                      ${formatDate(order.expires_at)}
+                    </div>
+                  </div>
+
+                </div>
+
+
+                <div class="order-actions">
+
+                  ${
+                    order.status === "processing"
+                    ? `
+                      <button
+                        class="order-button primary"
+                        onclick="openDeliverOrder('${order.id}')"
+                      >
+                        Deliver Order
+                      </button>
+                    `
+                    : ""
+                  }
+
+                  ${
+                    order.status === "delivered"
+                    ? `
+                      <button
+                        class="order-button"
+                        onclick="manageSubscription('${order.id}')"
+                      >
+                        Manage
+                      </button>
+                    `
+                    : ""
+                  }
+
+                </div>
+
+              </div>
+            `;
+
+          }).join("");
+
+      }
+
+    }
+
+
+    /* =========================
+       RENEWALS
+    ========================= */
+
+    const {
+      data: renewals,
+      error: renewalsError
+    } =
+      await supabaseClient
+        .from("renewals")
+        .select(`
+          id,
+          renewal_number,
+          order_id,
+          user_id,
+          renewal_product_id,
+          price_paid,
+          old_expires_at,
+          new_expires_at,
+          status,
+          created_at,
+          completed_at
+        `)
+        .order("created_at", {
+          ascending: false
+        });
+
+
+    if (renewalsError) {
+
+      console.error(
+        "[SUBLY] Renewals error:",
+        renewalsError
+      );
+
+      renewalsContainer.innerHTML = `
+        <div class="empty">
+          Could not load renewals.
+        </div>
+      `;
+
+    } else {
+
+      const renewalUserIds =
+        [...new Set(
+          (renewals || [])
+            .map(item => item.user_id)
+            .filter(Boolean)
+        )];
+
+
+      const renewalProductIds =
+        [...new Set(
+          (renewals || [])
+            .map(item =>
+              item.renewal_product_id
+            )
+            .filter(Boolean)
+        )];
+
+
+      let renewalProfiles = [];
+      let renewalProducts = [];
+
+
+      if (renewalUserIds.length) {
+
+        const { data } =
+          await supabaseClient
+            .from("profiles")
+            .select(
+              "id,username,business_name"
+            )
+            .in("id", renewalUserIds);
+
+        renewalProfiles = data || [];
+      }
+
+
+      if (renewalProductIds.length) {
+
+        const { data } =
+          await supabaseClient
+            .from("products")
+            .select(
+              "id,app_name,account_type,duration"
+            )
+            .in("id", renewalProductIds);
+
+        renewalProducts = data || [];
+      }
+
+
+      if (!renewals || renewals.length === 0) {
+
+        renewalsContainer.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🔁</div>
+            <div>No renewal requests yet.</div>
+          </div>
+        `;
+
+      } else {
+
+        renewalsContainer.innerHTML =
+          renewals.map(renewal => {
+
+            const reseller =
+              renewalProfiles.find(
+                profile =>
+                  profile.id === renewal.user_id
+              );
+
+            const product =
+              renewalProducts.find(
+                item =>
+                  item.id === renewal.renewal_product_id
+              );
+
+
+            return `
+              <div class="order-card">
+
+                <div class="order-top">
+
+                  <div>
+
+                    <div class="order-number">
+                      Renewal #${renewal.renewal_number}
+                    </div>
+
+                    <div class="order-name">
+                      ${product?.app_name || "Subscription"}
+                    </div>
+
+                    <div class="order-reseller">
+                      ${
+                        reseller?.business_name ||
+                        reseller?.username ||
+                        "Unknown reseller"
+                      }
+                    </div>
+
+                  </div>
+
+                  <span class="status-badge ${renewal.status}">
+                    ${renewal.status}
+                  </span>
+
+                </div>
+
+
+                <div class="order-details">
+
+                  <div class="order-detail">
+
+                    <div class="order-detail-label">
+                      Renewal
+                    </div>
+
+                    <div class="order-detail-value">
+                      ${product?.duration || "—"}
+                    </div>
+
+                  </div>
+
+
+                  <div class="order-detail">
+
+                    <div class="order-detail-label">
+                      Price Paid
+                    </div>
+
+                    <div class="order-detail-value">
+                      $${Number(
+                        renewal.price_paid || 0
+                      ).toFixed(2)}
+                    </div>
+
+                  </div>
+
+
+                  <div class="order-detail">
+
+                    <div class="order-detail-label">
+                      Current Expiry
+                    </div>
+
+                    <div class="order-detail-value">
+                      ${formatDate(
+                        renewal.old_expires_at
+                      )}
+                    </div>
+
+                  </div>
+
+
+                  <div class="order-detail">
+
+                    <div class="order-detail-label">
+                      New Expiry
+                    </div>
+
+                    <div class="order-detail-value">
+                      ${formatDate(
+                        renewal.new_expires_at
+                      )}
+                    </div>
+
+                  </div>
+
+                </div>
+
+
+                ${
+                  renewal.status === "pending"
+                  ? `
+                    <div class="order-actions">
+
+                      <button
+                        class="order-button success"
+                        onclick="openCompleteRenewal('${renewal.id}')"
+                      >
+                        Complete Renewal
+                      </button>
+
+                      <button
+                        class="order-button danger"
+                        onclick="openCancelRenewal('${renewal.id}')"
+                      >
+                        Cancel & Refund
+                      </button>
+
+                    </div>
+                  `
+                  : ""
+                }
+
+              </div>
+            `;
+
+          }).join("");
+
+      }
+
+    }
+
+
+    console.log(
+      "[SUBLY] Orders + renewals loaded"
+    );
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "[SUBLY] loadOrders crashed:",
+      error
+    );
+
+  }
+
+}
+
+
+/* TEMPORARY BUTTON HANDLERS
+   We'll replace these with proper confirmation
+   modals next.
+*/
+
+function openDeliverOrder(orderId) {
+
+  console.log(
+    "[SUBLY] Deliver order:",
+    orderId
+  );
+
+  alert(
+    "Delivery popup is the next step."
+  );
+}
+
+
+function manageSubscription(orderId) {
+
+  console.log(
+    "[SUBLY] Manage subscription:",
+    orderId
+  );
+
+  alert(
+    "Subscription management is the next step."
+  );
+}
+
+
+function openCompleteRenewal(renewalId) {
+
+  console.log(
+    "[SUBLY] Complete renewal:",
+    renewalId
+  );
+
+  alert(
+    "Renewal confirmation popup is the next step."
+  );
+}
+
+
+function openCancelRenewal(renewalId) {
+
+  console.log(
+    "[SUBLY] Cancel renewal:",
+    renewalId
+  );
+
+  alert(
+    "Cancel + refund confirmation is the next step."
+  );
 }
   function switchOrderView(view){
 

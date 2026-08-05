@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Subly | Admin</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #08070d;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .loading {
+      text-align: center;
+    }
+
+    .loading h1 {
+      margin-bottom: 8px;
+    }
+
+    .loading p {
+      color: #999;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="loading">
+    <h1>SUBLY</h1>
+    <p id="status">Checking admin access...</p>
+  </div>
+
+  <script>
+    const SUPABASE_URL =
+      "https://ymcvuwovcrqbhuhrjerd.supabase.co";
+
+    const SUPABASE_KEY =
+      "sb_publishable_Hu2aLWbK4YjkTPevo6TRtw_dRO4BIPc";
+
+    const supabaseClient =
+      window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+      );
+
+    async function checkAdmin() {
+
+      const status = document.getElementById("status");
+
+      try {
+
+        // Check login session
+        const {
+          data: { user },
+          error: userError
+        } = await supabaseClient.auth.getUser();
+
+        if (userError || !user) {
+          console.error("No valid login:", userError);
+          window.location.href = "login.html";
+          return;
+        }
+
+        console.log("[SUBLY] Logged in user:", user.id);
+
+        // Get profile
+        const {
+          data: profile,
+          error: profileError
+        } = await supabaseClient
+          .from("profiles")
+          .select("username, role, status, tier")
+          .eq("id", user.id)
+          .single();
+
+        if (profileError) {
+          console.error("[SUBLY] Profile error:", profileError);
+          status.textContent = "Could not load profile.";
+          return;
+        }
+
+        console.log("[SUBLY] Profile:", profile);
+
+        // Block disabled accounts
+        if (profile.status !== "active") {
+          await supabaseClient.auth.signOut();
+          alert("This account is disabled.");
+          window.location.href = "login.html";
+          return;
+        }
+
+        // Admin-only protection
+        if (profile.role !== "admin") {
+          console.warn("[SUBLY] Non-admin attempted admin access.");
+
+          window.location.href = "dashboard.html";
+          return;
+        }
+
+        // SUCCESS
+        status.textContent = "Admin authenticated ✓";
+
+        console.log("[SUBLY] ADMIN ACCESS GRANTED");
+
+      } catch (error) {
+
+        console.error("[SUBLY] Admin check crashed:", error);
+
+        status.textContent = "Something went wrong.";
+
+      }
+    }
+
+    checkAdmin();
+  </script>
+
+</body>
+</html>

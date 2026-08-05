@@ -3,127 +3,1037 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Subly | Admin</title>
+  <title>Subly | Admin Panel</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #08070d;
+      --sidebar: #0d0c13;
+      --card: #121118;
+      --card2: #17151f;
+      --border: #272431;
+      --text: #f5f5f7;
+      --muted: #8e8b99;
+      --purple: #9b4dff;
+      --pink: #f436a5;
+      --green: #36d399;
+      --red: #ff5c72;
+      --yellow: #f6c85f;
+    }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    /* LOADING */
+
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 9999;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #08070d;
-      color: white;
-      font-family: Arial, sans-serif;
     }
 
-    .loading {
+    .loader-box {
       text-align: center;
     }
 
-    .loading h1 {
+    .loader-box h1 {
+      font-size: 34px;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+
+    .loader-box p {
+      color: var(--muted);
+    }
+
+    /* APP */
+
+    #app {
+      display: none;
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR */
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 245px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      padding: 25px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      padding: 0 12px 26px;
+    }
+
+    .brand-title {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+
+    .brand-title span {
+      background: linear-gradient(90deg, var(--purple), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .nav-btn {
+      border: 0;
+      background: transparent;
+      color: #aaa7b3;
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.15s;
+      font-weight: 600;
+    }
+
+    .nav-btn:hover {
+      background: #17151f;
+      color: white;
+    }
+
+    .nav-btn.active {
+      color: white;
+      background: linear-gradient(
+        90deg,
+        rgba(155,77,255,.18),
+        rgba(244,54,165,.10)
+      );
+      border: 1px solid rgba(155,77,255,.25);
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+    }
+
+    .admin-box {
+      border-top: 1px solid var(--border);
+      padding: 18px 10px 10px;
+    }
+
+    .admin-name {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .admin-role {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .logout {
+      width: 100%;
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      background: #15131b;
+      color: #ddd;
+      padding: 10px;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+
+    .logout:hover {
+      border-color: #4a4557;
+    }
+
+    /* MAIN */
+
+    .main {
+      margin-left: 245px;
+      width: calc(100% - 245px);
+    }
+
+    .topbar {
+      height: 78px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 34px;
+      position: sticky;
+      top: 0;
+      background: rgba(8,7,13,.92);
+      backdrop-filter: blur(15px);
+      z-index: 10;
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(54,211,153,.6);
+    }
+
+    .content {
+      padding: 32px;
+      max-width: 1500px;
+      margin: auto;
+    }
+
+    .welcome {
+      margin-bottom: 28px;
+    }
+
+    .welcome h1 {
+      font-size: 30px;
+      margin-bottom: 7px;
+    }
+
+    .welcome p {
+      color: var(--muted);
+    }
+
+    /* STATS */
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 26px;
+    }
+
+    .stat-card {
+      background: linear-gradient(145deg, #131119, #0f0e14);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 21px;
+    }
+
+    .stat-top {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    .stat-icon {
+      font-size: 20px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 850;
+    }
+
+    .stat-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 7px;
+    }
+
+    /* PANELS */
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 20px 21px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-weight: 750;
+    }
+
+    .panel-sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .panel-body {
+      padding: 20px;
+    }
+
+    .empty {
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 30px;
+      margin-bottom: 12px;
+    }
+
+    /* QUICK ACTIONS */
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .action {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      color: white;
+      border-radius: 12px;
+      padding: 18px;
+      text-align: left;
+      cursor: pointer;
+      transition: .15s;
+    }
+
+    .action:hover {
+      transform: translateY(-2px);
+      border-color: #514b60;
+    }
+
+    .action-icon {
+      font-size: 22px;
+      margin-bottom: 13px;
+    }
+
+    .action-title {
+      font-weight: 700;
+    }
+
+    .action-desc {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    /* OTHER PAGES */
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .placeholder {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 35px;
+    }
+
+    .placeholder h2 {
       margin-bottom: 8px;
     }
 
-    .loading p {
-      color: #999;
+    .placeholder p {
+      color: var(--muted);
+    }
+
+    @media(max-width: 1050px) {
+      .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media(max-width: 750px) {
+      .sidebar {
+        width: 75px;
+        padding: 20px 9px;
+      }
+
+      .brand-title {
+        font-size: 16px;
+      }
+
+      .brand-sub,
+      .nav-text,
+      .admin-name,
+      .admin-role {
+        display: none;
+      }
+
+      .nav-btn {
+        text-align: center;
+      }
+
+      .main {
+        margin-left: 75px;
+        width: calc(100% - 75px);
+      }
+
+      .topbar {
+        padding: 0 18px;
+      }
+
+      .content {
+        padding: 20px;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 
 <body>
 
-  <div class="loading">
+<div id="loadingScreen">
+  <div class="loader-box">
     <h1>SUBLY</h1>
-    <p id="status">Checking admin access...</p>
+    <p id="loadingText">Checking admin access...</p>
   </div>
+</div>
 
-  <script>
-    const SUPABASE_URL =
-      "https://ymcvuwovcrqbhuhrjerd.supabase.co";
+<div id="app">
 
-    const SUPABASE_KEY =
-      "sb_publishable_Hu2aLWbK4YjkTPevo6TRtw_dRO4BIPc";
+  <aside class="sidebar">
 
-    const supabaseClient =
-      window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY
+    <div class="brand">
+      <div class="brand-title">SUB<span>LY</span></div>
+      <div class="brand-sub">ADMIN CONTROL</div>
+    </div>
+
+    <nav class="nav">
+
+      <button class="nav-btn active" data-page="dashboard">
+        🏠 <span class="nav-text">Dashboard</span>
+      </button>
+
+      <button class="nav-btn" data-page="resellers">
+        👥 <span class="nav-text">Resellers</span>
+      </button>
+
+      <button class="nav-btn" data-page="wallets">
+        💰 <span class="nav-text">Wallets</span>
+      </button>
+
+      <button class="nav-btn" data-page="topups">
+        💳 <span class="nav-text">Top-up Requests</span>
+      </button>
+
+      <button class="nav-btn" data-page="orders">
+        🛒 <span class="nav-text">Orders</span>
+      </button>
+
+      <button class="nav-btn" data-page="products">
+        📦 <span class="nav-text">Products</span>
+      </button>
+
+      <button class="nav-btn" data-page="pricing">
+        💵 <span class="nav-text">Pricing</span>
+      </button>
+
+      <button class="nav-btn" data-page="transactions">
+        📜 <span class="nav-text">Transactions</span>
+      </button>
+
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="admin-box">
+        <div class="admin-name" id="adminName">Administrator</div>
+        <div class="admin-role">Subly Admin</div>
+
+        <button class="logout" onclick="logout()">
+          ↪ <span class="nav-text">Logout</span>
+        </button>
+      </div>
+    </div>
+
+  </aside>
+
+
+  <main class="main">
+
+    <header class="topbar">
+      <div class="page-title" id="pageTitle">Dashboard</div>
+
+      <div class="status">
+        <span class="dot"></span>
+        System online
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+
+      <section class="page active" id="dashboard">
+
+        <div class="welcome">
+          <h1>Welcome back 👋</h1>
+          <p>Here's what's happening with Subly.</p>
+        </div>
+
+        <div class="stats">
+
+          <div class="stat-card">
+            <div class="stat-top">
+              <span>Total Resellers</span>
+              <span class="stat-icon">👥</span>
+            </div>
+            <div class="stat-value" id="resellerCount">—</div>
+            <div class="stat-note">Registered reseller accounts</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-top">
+              <span>Orders</span>
+              <span class="stat-icon">🛒</span>
+            </div>
+            <div class="stat-value" id="orderCount">—</div>
+            <div class="stat-note">Total orders</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-top">
+              <span>Pending Top-ups</span>
+              <span class="stat-icon">💳</span>
+            </div>
+            <div class="stat-value" id="topupCount">—</div>
+            <div class="stat-note">Waiting for review</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-top">
+              <span>Wallet Balance</span>
+              <span class="stat-icon">💰</span>
+            </div>
+            <div class="stat-value" id="walletTotal">—</div>
+            <div class="stat-note">Across reseller wallets</div>
+          </div>
+
+        </div>
+
+        <div class="grid">
+
+          <div class="panel">
+
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Recent Orders</div>
+                <div class="panel-sub">Latest reseller activity</div>
+              </div>
+            </div>
+
+            <div class="panel-body">
+              <div class="empty">
+                <div class="empty-icon">🛒</div>
+                <div>No orders to display yet.</div>
+              </div>
+            </div>
+
+          </div>
+
+
+          <div class="panel">
+
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Quick Actions</div>
+                <div class="panel-sub">Common admin tasks</div>
+              </div>
+            </div>
+
+            <div class="panel-body">
+
+              <div class="actions">
+
+                <button class="action" onclick="openPage('resellers')">
+                  <div class="action-icon">➕</div>
+                  <div class="action-title">Add Reseller</div>
+                  <div class="action-desc">Create a reseller account</div>
+                </button>
+
+                <button class="action" onclick="openPage('topups')">
+                  <div class="action-icon">💳</div>
+                  <div class="action-title">Top-ups</div>
+                  <div class="action-desc">Review deposits</div>
+                </button>
+
+                <button class="action" onclick="openPage('products')">
+                  <div class="action-icon">📦</div>
+                  <div class="action-title">Products</div>
+                  <div class="action-desc">Manage services</div>
+                </button>
+
+                <button class="action" onclick="openPage('pricing')">
+                  <div class="action-icon">💵</div>
+                  <div class="action-title">Pricing</div>
+                  <div class="action-desc">Manage reseller prices</div>
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <section class="page" id="resellers">
+        <div class="placeholder">
+          <h2>👥 Resellers</h2>
+          <p>Reseller management will be connected here next.</p>
+        </div>
+      </section>
+
+      <section class="page" id="wallets">
+        <div class="placeholder">
+          <h2>💰 Wallets</h2>
+          <p>Manage reseller balances and wallet adjustments.</p>
+        </div>
+      </section>
+
+      <section class="page" id="topups">
+        <div class="placeholder">
+          <h2>💳 Top-up Requests</h2>
+          <p>Approve or reject reseller balance requests.</p>
+        </div>
+      </section>
+
+      <section class="page" id="orders">
+        <div class="placeholder">
+          <h2>🛒 Orders</h2>
+          <p>Order management will appear here.</p>
+        </div>
+      </section>
+
+      <section class="page" id="products">
+        <div class="placeholder">
+          <h2>📦 Products</h2>
+          <p>Manage Netflix, Shahid and other services.</p>
+        </div>
+      </section>
+
+      <section class="page" id="pricing">
+        <div class="placeholder">
+          <h2>💵 Pricing</h2>
+          <p>Configure reseller tier pricing.</p>
+        </div>
+      </section>
+
+      <section class="page" id="transactions">
+        <div class="placeholder">
+          <h2>📜 Transactions</h2>
+          <p>Wallet transaction history will appear here.</p>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+</div>
+
+
+<script>
+
+  /* =========================
+     SUPABASE
+  ========================= */
+
+  const SUPABASE_URL =
+    "https://ymcvuwovcrqbhuhrjerd.supabase.co";
+
+  const SUPABASE_KEY =
+    "sb_publishable_Hu2aLWbK4YjkTPevo6TRtw_dRO4BIPc";
+
+  const supabaseClient =
+    window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+
+  /* =========================
+     ADMIN SECURITY
+  ========================= */
+
+  async function checkAdmin() {
+
+    const loadingText =
+      document.getElementById("loadingText");
+
+    try {
+
+      const {
+        data: { user },
+        error: userError
+      } = await supabaseClient.auth.getUser();
+
+
+      if (userError || !user) {
+
+        console.error("[SUBLY] No session:", userError);
+
+        window.location.href = "login.html";
+        return;
+      }
+
+
+      console.log("[SUBLY] User:", user.id);
+
+
+      const {
+        data: profile,
+        error: profileError
+      } = await supabaseClient
+        .from("profiles")
+        .select("username, business_name, role, status, tier")
+        .eq("id", user.id)
+        .single();
+
+
+      if (profileError || !profile) {
+
+        console.error(
+          "[SUBLY] Profile error:",
+          profileError
+        );
+
+        loadingText.textContent =
+          "Unable to load admin profile.";
+
+        return;
+      }
+
+
+      console.log("[SUBLY] Profile:", profile);
+
+
+      if (profile.status !== "active") {
+
+        await supabaseClient.auth.signOut();
+
+        window.location.href = "login.html";
+        return;
+      }
+
+
+      if (profile.role !== "admin") {
+
+        console.warn(
+          "[SUBLY] Unauthorized admin access"
+        );
+
+        window.location.href = "dashboard.html";
+        return;
+      }
+
+
+      document.getElementById("adminName").textContent =
+        profile.username || "Administrator";
+
+
+      document.getElementById("loadingScreen").style.display =
+        "none";
+
+      document.getElementById("app").style.display =
+        "block";
+
+
+      console.log(
+        "[SUBLY] ADMIN ACCESS GRANTED"
       );
 
-    async function checkAdmin() {
 
-      const status = document.getElementById("status");
+      loadDashboard();
 
-      try {
-
-        // Check login session
-        const {
-          data: { user },
-          error: userError
-        } = await supabaseClient.auth.getUser();
-
-        if (userError || !user) {
-          console.error("No valid login:", userError);
-          window.location.href = "login.html";
-          return;
-        }
-
-        console.log("[SUBLY] Logged in user:", user.id);
-
-        // Get profile
-        const {
-          data: profile,
-          error: profileError
-        } = await supabaseClient
-          .from("profiles")
-          .select("username, role, status, tier")
-          .eq("id", user.id)
-          .single();
-
-        if (profileError) {
-          console.error("[SUBLY] Profile error:", profileError);
-          status.textContent = "Could not load profile.";
-          return;
-        }
-
-        console.log("[SUBLY] Profile:", profile);
-
-        // Block disabled accounts
-        if (profile.status !== "active") {
-          await supabaseClient.auth.signOut();
-          alert("This account is disabled.");
-          window.location.href = "login.html";
-          return;
-        }
-
-        // Admin-only protection
-        if (profile.role !== "admin") {
-          console.warn("[SUBLY] Non-admin attempted admin access.");
-
-          window.location.href = "dashboard.html";
-          return;
-        }
-
-        // SUCCESS
-        status.textContent = "Admin authenticated ✓";
-
-        console.log("[SUBLY] ADMIN ACCESS GRANTED");
-
-      } catch (error) {
-
-        console.error("[SUBLY] Admin check crashed:", error);
-
-        status.textContent = "Something went wrong.";
-
-      }
     }
 
-    checkAdmin();
-  </script>
+    catch (error) {
+
+      console.error(
+        "[SUBLY] Admin initialization error:",
+        error
+      );
+
+      loadingText.textContent =
+        "Something went wrong.";
+
+    }
+
+  }
+
+
+  /* =========================
+     DASHBOARD DATA
+  ========================= */
+
+  async function loadDashboard() {
+
+    try {
+
+      const {
+        count: resellerCount,
+        error: resellerError
+      } = await supabaseClient
+        .from("profiles")
+        .select("*", {
+          count: "exact",
+          head: true
+        })
+        .eq("role", "reseller");
+
+
+      if (!resellerError) {
+        document.getElementById(
+          "resellerCount"
+        ).textContent = resellerCount ?? 0;
+      }
+
+
+      const {
+        count: orderCount,
+        error: orderError
+      } = await supabaseClient
+        .from("orders")
+        .select("*", {
+          count: "exact",
+          head: true
+        });
+
+
+      if (!orderError) {
+        document.getElementById(
+          "orderCount"
+        ).textContent = orderCount ?? 0;
+      }
+
+
+      const {
+        count: topupCount,
+        error: topupError
+      } = await supabaseClient
+        .from("topup_requests")
+        .select("*", {
+          count: "exact",
+          head: true
+        })
+        .eq("status", "pending");
+
+
+      if (!topupError) {
+        document.getElementById(
+          "topupCount"
+        ).textContent = topupCount ?? 0;
+      }
+
+
+      const {
+        data: wallets,
+        error: walletError
+      } = await supabaseClient
+        .from("wallets")
+        .select("balance");
+
+
+      if (!walletError && wallets) {
+
+        const total =
+          wallets.reduce(
+            (sum, wallet) =>
+              sum + Number(wallet.balance || 0),
+            0
+          );
+
+        document.getElementById(
+          "walletTotal"
+        ).textContent =
+          "$" + total.toFixed(2);
+
+      }
+
+
+      console.log(
+        "[SUBLY] Dashboard loaded"
+      );
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "[SUBLY] Dashboard error:",
+        error
+      );
+
+    }
+
+  }
+
+
+  /* =========================
+     NAVIGATION
+  ========================= */
+
+  const titles = {
+    dashboard: "Dashboard",
+    resellers: "Resellers",
+    wallets: "Wallets",
+    topups: "Top-up Requests",
+    orders: "Orders",
+    products: "Products",
+    pricing: "Pricing",
+    transactions: "Transactions"
+  };
+
+
+  function openPage(pageName) {
+
+    document
+      .querySelectorAll(".page")
+      .forEach(page =>
+        page.classList.remove("active")
+      );
+
+
+    document
+      .querySelectorAll(".nav-btn")
+      .forEach(button =>
+        button.classList.remove("active")
+      );
+
+
+    const page =
+      document.getElementById(pageName);
+
+
+    if (page) {
+      page.classList.add("active");
+    }
+
+
+    const button =
+      document.querySelector(
+        `[data-page="${pageName}"]`
+      );
+
+
+    if (button) {
+      button.classList.add("active");
+    }
+
+
+    document.getElementById(
+      "pageTitle"
+    ).textContent =
+      titles[pageName] || "Subly";
+
+  }
+
+
+  document
+    .querySelectorAll(".nav-btn")
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+          openPage(
+            button.dataset.page
+          );
+        }
+      );
+
+    });
+
+
+  /* =========================
+     LOGOUT
+  ========================= */
+
+  async function logout() {
+
+    await supabaseClient.auth.signOut();
+
+    window.location.href =
+      "login.html";
+
+  }
+
+
+  /* =========================
+     START
+  ========================= */
+
+  checkAdmin();
+
+</script>
 
 </body>
 </html>

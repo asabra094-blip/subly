@@ -442,6 +442,55 @@
         grid-template-columns: 1fr;
       }
     }
+    .reseller-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: center;
+
+  padding: 15px 12px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.reseller-row:last-child {
+  border-bottom: 0;
+}
+
+.reseller-name {
+  font-weight: 700;
+}
+
+.reseller-sub {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.badge {
+  display: inline-block;
+
+  padding: 6px 10px;
+  border-radius: 20px;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  border: 1px solid var(--border);
+  background: #18161f;
+}
+
+.badge.active {
+  color: var(--green);
+}
+
+.badge.inactive {
+  color: var(--yellow);
+}
+
+.badge.suspended {
+  color: var(--red);
+}
   </style>
 </head>
 
@@ -645,11 +694,36 @@
 
 
       <section class="page" id="resellers">
-        <div class="placeholder">
-          <h2>👥 Resellers</h2>
-          <p>Reseller management will be connected here next.</p>
+
+  <div class="panel">
+
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Resellers</div>
+        <div class="panel-sub">
+          Manage reseller accounts and access
         </div>
-      </section>
+      </div>
+
+      <button class="action" style="padding:10px 14px;" disabled>
+        + Add Reseller
+      </button>
+    </div>
+
+    <div class="panel-body">
+
+      <div id="resellerList">
+        <div class="empty">
+          <div class="empty-icon">👥</div>
+          <div>Loading resellers...</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
 
       <section class="page" id="wallets">
         <div class="placeholder">
@@ -989,12 +1063,16 @@
     }
 
 
-    document.getElementById(
-      "pageTitle"
-    ).textContent =
-      titles[pageName] || "Subly";
+document.getElementById(
+  "pageTitle"
+).textContent =
+  titles[pageName] || "Subly";
 
-  }
+if (pageName === "resellers") {
+  loadResellers();
+}
+
+}
 
 
   document
@@ -1032,7 +1110,105 @@
   ========================= */
 
   checkAdmin();
+  
+async function loadResellers() {
+  const container = document.getElementById("resellerList");
 
+  if (!container) {
+    console.error("[SUBLY] resellerList element not found");
+    return;
+  }
+
+  console.log("[SUBLY] Loading resellers...");
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .select(`
+        id,
+        username,
+        business_name,
+        tier,
+        status,
+        role,
+        created_at
+      `)
+      .eq("role", "reseller")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[SUBLY] Reseller load error:", error);
+
+      container.innerHTML = `
+        <div class="empty">
+          Could not load resellers.
+        </div>
+      `;
+      return;
+    }
+
+    console.log("[SUBLY] Resellers:", data);
+
+    if (!data || data.length === 0) {
+      container.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">👥</div>
+          <div>No reseller accounts yet.</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = data.map(reseller => `
+      <div class="reseller-row">
+
+        <div>
+          <div class="reseller-name">
+            ${reseller.username || "No username"}
+          </div>
+
+          <div class="reseller-sub">
+            ${reseller.business_name || "No business name"}
+          </div>
+        </div>
+
+        <div>
+          <span class="badge">
+            ${reseller.tier || "bronze"}
+          </span>
+        </div>
+
+        <div>
+          <span class="badge ${reseller.status || "inactive"}">
+            ${reseller.status || "inactive"}
+          </span>
+        </div>
+
+        <div>
+          <button
+            class="action"
+            style="padding:8px 12px;"
+            disabled
+          >
+            Manage
+          </button>
+        </div>
+
+      </div>
+    `).join("");
+
+    console.log("[SUBLY] Resellers loaded:", data.length);
+
+  } catch (error) {
+    console.error("[SUBLY] Reseller page crashed:", error);
+
+    container.innerHTML = `
+      <div class="empty">
+        Something went wrong.
+      </div>
+    `;
+  }
+}
 </script>
 
 </body>

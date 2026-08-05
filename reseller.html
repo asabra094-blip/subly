@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subly | Reseller</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at top,rgba(145,80,255,.18),transparent 30%),
+    #08070d;
+  color:white;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+
+#loading{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#08070d;
+  z-index:999;
+}
+
+#app{
+  display:none;
+}
+
+.header{
+  height:72px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 22px;
+  background:rgba(8,7,13,.9);
+  backdrop-filter:blur(15px);
+}
+
+.brand{
+  font-size:22px;
+  font-weight:900;
+}
+
+.brand span{
+  background:linear-gradient(90deg,#975cff,#ff3fa4);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.logout{
+  border:1px solid rgba(255,255,255,.1);
+  background:#17151f;
+  color:white;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+.main{
+  max-width:1000px;
+  margin:auto;
+  padding:32px 18px;
+}
+
+.welcome{
+  margin-bottom:25px;
+}
+
+.welcome h1{
+  font-size:30px;
+}
+
+.welcome p{
+  color:#92929e;
+  margin-top:6px;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+}
+
+.card{
+  background:#121118;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  padding:20px;
+}
+
+.card-label{
+  color:#92929e;
+  font-size:12px;
+}
+
+.card-value{
+  margin-top:9px;
+  font-size:24px;
+  font-weight:850;
+}
+
+.section{
+  margin-top:25px;
+  background:#121118;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  padding:22px;
+}
+
+.section h2{
+  font-size:19px;
+  margin-bottom:7px;
+}
+
+.section p{
+  color:#92929e;
+  font-size:13px;
+  line-height:1.6;
+}
+
+@media(max-width:700px){
+  .cards{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="loading">
+  Checking reseller access...
+</div>
+
+<div id="app">
+
+  <header class="header">
+    <div class="brand">SUB<span>LY</span></div>
+
+    <button class="logout" onclick="logout()">
+      Logout
+    </button>
+  </header>
+
+  <main class="main">
+
+    <div class="welcome">
+      <h1 id="welcomeName">Welcome 👋</h1>
+      <p>Subly Reseller Dashboard</p>
+    </div>
+
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-label">Wallet Balance</div>
+        <div class="card-value" id="walletBalance">$0.00</div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Tier</div>
+        <div class="card-value" id="tier">—</div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Orders</div>
+        <div class="card-value" id="orderCount">0</div>
+      </div>
+
+    </div>
+
+    <div class="section">
+      <h2>Products</h2>
+      <p>
+        Product ordering, reseller pricing and renewals will appear here next.
+      </p>
+    </div>
+
+    <div class="section">
+      <h2>My Subscriptions</h2>
+      <p>
+        Active subscriptions, expiration dates and renewal options will appear here.
+      </p>
+    </div>
+
+  </main>
+
+</div>
+
+<script>
+
+const SUPABASE_URL =
+  "https://ymcvuwovcrqbhuhrjerd.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_Hu2aLWbK4YjkTPevo6TRtw_dRO4BIPc";
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+
+async function loadReseller(){
+
+  const {
+    data: { user },
+    error: userError
+  } =
+    await supabaseClient.auth.getUser();
+
+
+  if(userError || !user){
+    window.location.href = "login.html";
+    return;
+  }
+
+
+  const {
+    data: profile,
+    error: profileError
+  } =
+    await supabaseClient
+      .from("profiles")
+      .select(
+        "username,business_name,role,status,tier"
+      )
+      .eq("id",user.id)
+      .single();
+
+
+  if(profileError || !profile){
+    await supabaseClient.auth.signOut();
+    window.location.href = "login.html";
+    return;
+  }
+
+
+  if(
+    profile.role !== "reseller" ||
+    profile.status !== "active"
+  ){
+    await supabaseClient.auth.signOut();
+    window.location.href = "login.html";
+    return;
+  }
+
+
+  document.getElementById(
+    "welcomeName"
+  ).textContent =
+    "Welcome, " +
+    (profile.business_name ||
+     profile.username ||
+     "Reseller") +
+    " 👋";
+
+
+  document.getElementById(
+    "tier"
+  ).textContent =
+    profile.tier
+      ? profile.tier.charAt(0).toUpperCase() +
+        profile.tier.slice(1)
+      : "—";
+
+
+  const {
+    data: wallet
+  } =
+    await supabaseClient
+      .from("wallets")
+      .select("balance")
+      .eq("user_id",user.id)
+      .single();
+
+
+  document.getElementById(
+    "walletBalance"
+  ).textContent =
+    "$" +
+    Number(wallet?.balance || 0)
+      .toFixed(2);
+
+
+  const {
+    count: orders
+  } =
+    await supabaseClient
+      .from("orders")
+      .select("*",{
+        count:"exact",
+        head:true
+      })
+      .eq("user_id",user.id);
+
+
+  document.getElementById(
+    "orderCount"
+  ).textContent =
+    orders ?? 0;
+
+
+  document.getElementById(
+    "loading"
+  ).style.display = "none";
+
+  document.getElementById(
+    "app"
+  ).style.display = "block";
+
+}
+
+
+async function logout(){
+
+  await supabaseClient.auth.signOut();
+
+  window.location.href =
+    "login.html";
+
+}
+
+
+loadReseller();
+
+</script>
+
+</body>
+</html>

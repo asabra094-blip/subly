@@ -491,6 +491,105 @@
 .badge.suspended {
   color: var(--red);
 }
+    .modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.72);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  z-index:9999;
+  backdrop-filter:blur(8px);
+}
+
+.modal.show{
+  display:flex;
+}
+
+.modal-card{
+  width:100%;
+  max-width:460px;
+  background:#121118;
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:0 30px 80px rgba(0,0,0,.5);
+  overflow:hidden;
+}
+
+.modal-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  padding:20px;
+  border-bottom:1px solid var(--border);
+}
+
+.modal-head h2{
+  margin-bottom:5px;
+}
+
+.modal-head p{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.modal-close{
+  border:0;
+  background:transparent;
+  color:#aaa;
+  font-size:18px;
+  cursor:pointer;
+}
+
+.modal-body{
+  padding:20px;
+}
+
+.modal-body label{
+  display:block;
+  margin:14px 0 7px;
+  font-size:13px;
+  font-weight:700;
+}
+
+.modal-body input,
+.modal-body select{
+  width:100%;
+  height:48px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:#191720;
+  color:white;
+  padding:0 12px;
+  outline:none;
+}
+
+.modal-body input:focus,
+.modal-body select:focus{
+  border-color:var(--purple);
+}
+
+#createResellerButton{
+  width:100%;
+  margin-top:20px;
+}
+
+.create-reseller-btn{
+  border:0;
+  border-radius:11px;
+  padding:13px 16px;
+  font-weight:800;
+  color:white;
+  cursor:pointer;
+  background:linear-gradient(135deg,var(--purple),var(--pink));
+}
+
+#resellerModalMessage{
+  margin-top:14px;
+  font-size:13px;
+  color:var(--red);
+}
   </style>
 </head>
 
@@ -705,9 +804,13 @@
         </div>
       </div>
 
-      <button class="action" style="padding:10px 14px;" disabled>
-        + Add Reseller
-      </button>
+      <button
+  class="action"
+  style="padding:10px 14px;"
+  onclick="openResellerModal()"
+>
+  + Add Reseller
+</button>
     </div>
 
     <div class="panel-body">
@@ -1209,7 +1312,263 @@ async function loadResellers() {
     `;
   }
 }
+  /* =========================
+   RESELLER MODAL
+========================= */
+
+function openResellerModal() {
+  document
+    .getElementById("resellerModal")
+    .classList.add("show");
+
+  document.getElementById(
+    "resellerModalMessage"
+  ).textContent = "";
+}
+
+
+function closeResellerModal() {
+  document
+    .getElementById("resellerModal")
+    .classList.remove("show");
+}
+
+
+/* =========================
+   CREATE RESELLER
+========================= */
+
+async function createReseller() {
+
+  const username =
+    document
+      .getElementById("newResellerUsername")
+      .value
+      .trim()
+      .toLowerCase();
+
+  const businessName =
+    document
+      .getElementById("newResellerBusiness")
+      .value
+      .trim();
+
+  const password =
+    document
+      .getElementById("newResellerPassword")
+      .value;
+
+  const tier =
+    document
+      .getElementById("newResellerTier")
+      .value;
+
+  const message =
+    document.getElementById(
+      "resellerModalMessage"
+    );
+
+  const button =
+    document.getElementById(
+      "createResellerButton"
+    );
+
+
+  message.textContent = "";
+
+
+  if (!username || !businessName || !password) {
+    message.textContent =
+      "Please fill in all fields.";
+    return;
+  }
+
+
+  button.disabled = true;
+  button.textContent = "Creating...";
+
+
+  console.log(
+    "[SUBLY] Creating reseller:",
+    {
+      username,
+      business_name: businessName,
+      tier
+    }
+  );
+
+
+  try {
+
+    const {
+      data,
+      error
+    } =
+      await supabaseClient.functions.invoke(
+        "create-reseller",
+        {
+          body: {
+            username: username,
+            password: password,
+            business_name: businessName,
+            tier: tier
+          }
+        }
+      );
+
+
+    console.log(
+      "[SUBLY] create-reseller response:",
+      data
+    );
+
+
+    if (error) {
+
+      console.error(
+        "[SUBLY] Edge Function error:",
+        error
+      );
+
+      message.textContent =
+        "Could not create reseller.";
+
+      return;
+    }
+
+
+    if (!data || data.error) {
+
+      console.error(
+        "[SUBLY] Reseller creation failed:",
+        data
+      );
+
+      message.textContent =
+        data?.error ||
+        "Could not create reseller.";
+
+      return;
+    }
+
+
+    console.log(
+      "[SUBLY] Reseller created:",
+      data.reseller
+    );
+
+
+    message.style.color =
+      "var(--green)";
+
+    message.textContent =
+      "Reseller created successfully ✓";
+
+
+    document.getElementById(
+      "newResellerUsername"
+    ).value = "";
+
+    document.getElementById(
+      "newResellerBusiness"
+    ).value = "";
+
+    document.getElementById(
+      "newResellerPassword"
+    ).value = "";
+
+    document.getElementById(
+      "newResellerTier"
+    ).value = "bronze";
+
+
+    await loadResellers();
+    await loadDashboard();
+
+
+    setTimeout(() => {
+
+      closeResellerModal();
+
+      message.style.color =
+        "var(--red)";
+
+    }, 900);
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "[SUBLY] createReseller crashed:",
+      error
+    );
+
+    message.textContent =
+      "Something went wrong.";
+
+  }
+
+  finally {
+
+    button.disabled = false;
+    button.textContent =
+      "Create Reseller";
+
+  }
+}
 </script>
 
+  <div id="resellerModal" class="modal">
+  <div class="modal-card">
+
+    <div class="modal-head">
+      <div>
+        <h2>Add Reseller</h2>
+        <p>Create a new Subly reseller account.</p>
+      </div>
+
+      <button class="modal-close" onclick="closeResellerModal()">
+        ✕
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <label>Username</label>
+      <input id="newResellerUsername" placeholder="example: shop123">
+
+      <label>Business Name</label>
+      <input id="newResellerBusiness" placeholder="Example Shop">
+
+      <label>Password</label>
+      <input
+        id="newResellerPassword"
+        type="password"
+        placeholder="Minimum 8 characters"
+      >
+
+      <label>Tier</label>
+      <select id="newResellerTier">
+        <option value="bronze">Bronze</option>
+        <option value="silver">Silver</option>
+        <option value="gold">Gold</option>
+      </select>
+
+      <div id="resellerModalMessage"></div>
+
+      <button
+        id="createResellerButton"
+        class="create-reseller-btn"
+        onclick="createReseller()"
+      >
+        Create Reseller
+      </button>
+
+    </div>
+
+  </div>
+</div>
+  
 </body>
 </html>

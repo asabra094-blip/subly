@@ -590,6 +590,183 @@
   font-size:13px;
   color:var(--red);
 }
+    /* =========================
+   ORDERS
+========================= */
+
+.order-tabs{
+  display:flex;
+  gap:8px;
+  margin-bottom:18px;
+}
+
+.order-tab{
+  border:1px solid var(--border);
+  background:#17151f;
+  color:#aaa7b3;
+  padding:10px 15px;
+  border-radius:10px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.order-tab.active{
+  color:white;
+  border-color:rgba(155,77,255,.38);
+  background:rgba(155,77,255,.14);
+}
+
+.order-view{
+  display:none;
+}
+
+.order-view.active{
+  display:block;
+}
+
+.order-card{
+  border:1px solid var(--border);
+  background:#111018;
+  border-radius:14px;
+  padding:18px;
+  margin-bottom:12px;
+}
+
+.order-card:last-child{
+  margin-bottom:0;
+}
+
+.order-top{
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  align-items:flex-start;
+}
+
+.order-number{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+
+.order-name{
+  font-size:17px;
+  font-weight:800;
+}
+
+.order-reseller{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:4px;
+}
+
+.order-details{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-top:16px;
+}
+
+.order-detail{
+  background:#17151f;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px;
+}
+
+.order-detail-label{
+  color:var(--muted);
+  font-size:11px;
+  margin-bottom:6px;
+}
+
+.order-detail-value{
+  font-size:13px;
+  font-weight:700;
+  word-break:break-word;
+}
+
+.order-actions{
+  margin-top:16px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.order-button{
+  border:1px solid var(--border);
+  background:#191720;
+  color:white;
+  border-radius:9px;
+  padding:9px 12px;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:750;
+}
+
+.order-button.primary{
+  border:0;
+  background:linear-gradient(
+    135deg,
+    var(--purple),
+    var(--pink)
+  );
+}
+
+.order-button.success{
+  border-color:rgba(54,211,153,.25);
+  color:var(--green);
+}
+
+.order-button.danger{
+  border-color:rgba(255,92,114,.25);
+  color:var(--red);
+}
+
+.status-badge{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+  border:1px solid var(--border);
+  background:#18161f;
+}
+
+.status-badge.processing,
+.status-badge.pending{
+  color:var(--yellow);
+}
+
+.status-badge.delivered,
+.status-badge.completed{
+  color:var(--green);
+}
+
+.status-badge.cancelled,
+.status-badge.refunded{
+  color:var(--red);
+}
+
+.status-badge.expired{
+  color:#aaa;
+}
+
+@media(max-width:900px){
+  .order-details{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media(max-width:560px){
+  .order-top{
+    flex-direction:column;
+  }
+
+  .order-details{
+    grid-template-columns:1fr;
+  }
+}
   </style>
 </head>
 
@@ -843,11 +1020,88 @@
       </section>
 
       <section class="page" id="orders">
-        <div class="placeholder">
-          <h2>🛒 Orders</h2>
-          <p>Order management will appear here.</p>
+
+  <div class="panel">
+
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Orders</div>
+        <div class="panel-sub">
+          Manage new subscriptions, deliveries and renewals
         </div>
-      </section>
+      </div>
+
+      <button
+        class="action"
+        style="padding:10px 14px;"
+        onclick="loadOrders()"
+      >
+        ↻ Refresh
+      </button>
+    </div>
+
+
+    <div class="panel-body">
+
+      <div class="order-tabs">
+
+        <button
+          class="order-tab active"
+          data-order-view="subscriptions"
+          onclick="switchOrderView('subscriptions')"
+        >
+          Subscriptions
+        </button>
+
+        <button
+          class="order-tab"
+          data-order-view="renewals"
+          onclick="switchOrderView('renewals')"
+        >
+          Renewals
+        </button>
+
+      </div>
+
+
+      <div
+        id="subscriptionOrdersView"
+        class="order-view active"
+      >
+
+        <div id="ordersList">
+
+          <div class="empty">
+            <div class="empty-icon">🛒</div>
+            <div>Loading orders...</div>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="renewalOrdersView"
+        class="order-view"
+      >
+
+        <div id="renewalsList">
+
+          <div class="empty">
+            <div class="empty-icon">🔁</div>
+            <div>Loading renewals...</div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
 
       <section class="page" id="products">
         <div class="placeholder">
@@ -1516,6 +1770,48 @@ async function createReseller() {
       "Create Reseller";
 
   }
+}
+  function switchOrderView(view){
+
+  document
+    .querySelectorAll(".order-view")
+    .forEach(el =>
+      el.classList.remove("active")
+    );
+
+  document
+    .querySelectorAll(".order-tab")
+    .forEach(el =>
+      el.classList.remove("active")
+    );
+
+
+  if(view === "renewals"){
+
+    document
+      .getElementById("renewalOrdersView")
+      .classList.add("active");
+
+    document
+      .querySelector(
+        '[data-order-view="renewals"]'
+      )
+      .classList.add("active");
+
+  }else{
+
+    document
+      .getElementById("subscriptionOrdersView")
+      .classList.add("active");
+
+    document
+      .querySelector(
+        '[data-order-view="subscriptions"]'
+      )
+      .classList.add("active");
+
+  }
+
 }
 </script>
 

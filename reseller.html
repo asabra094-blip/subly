@@ -433,371 +433,6 @@ button{
    TOP-UP REQUESTS
 ========================= */
 
-function paymentMethodLabel(value){
-  if(value === "whish_money") return "Whish Money";
-  if(value === "cash") return "Cash";
-  if(value === "crypto") return "Crypto";
-  return value || "Unknown";
-}
-
-function formatDateTime(value){
-  if(!value) return "—";
-
-  return new Date(value).toLocaleString(
-    undefined,
-    {
-      year:"numeric",
-      month:"short",
-      day:"numeric",
-      hour:"2-digit",
-      minute:"2-digit"
-    }
-  );
-}
-
-function openTopupModal(){
-  const modal =
-    document.getElementById("topupModal");
-
-  if(!modal) return;
-
-  document.getElementById("topupAmount").value = "";
-  document.getElementById("topupMethod").value = "whish_money";
-  document.getElementById("topupReference").value = "";
-  document.getElementById("topupNote").value = "";
-
-  const message =
-    document.getElementById("topupMessage");
-
-  message.textContent = "";
-  message.className = "topup-message";
-
-  updateTopupMethodUI();
-  modal.classList.add("show");
-}
-
-function closeTopupModal(){
-  document
-    .getElementById("topupModal")
-    ?.classList.remove("show");
-}
-
-function updateTopupMethodUI(){
-  const method =
-    document.getElementById("topupMethod")?.value;
-
-  const instructions =
-    document.getElementById("topupInstructions");
-
-  const referenceGroup =
-    document.getElementById("topupReferenceGroup");
-
-  const referenceInput =
-    document.getElementById("topupReference");
-
-  const code =
-    currentProfile?.reseller_code ||
-    "your reseller code";
-
-  if(!instructions || !referenceGroup || !referenceInput){
-    return;
-  }
-
-  if(method === "cash"){
-    instructions.innerHTML = `
-      Arrange the cash payment with Subly, then submit the request here.
-      Your payment code is
-      <span class="payment-code">${escapeHtml(code)}</span>.
-      The reference field is optional for cash.
-    `;
-
-    referenceInput.required = false;
-    referenceInput.placeholder = "Optional cash receipt/reference";
-  }else{
-    instructions.innerHTML = `
-      Send the Whish Money payment first. Put
-      <span class="payment-code">${escapeHtml(code)}</span>
-      in the payment description, then enter the Whish transaction/reference ID below.
-    `;
-
-    referenceInput.required = true;
-    referenceInput.placeholder = "Required Whish transaction/reference ID";
-  }
-}
-
-async function submitTopupRequest(){
-  const amountInput =
-    document.getElementById("topupAmount");
-
-  const methodInput =
-    document.getElementById("topupMethod");
-
-  const referenceInput =
-    document.getElementById("topupReference");
-
-  const noteInput =
-    document.getElementById("topupNote");
-
-  const button =
-    document.getElementById("submitTopupButton");
-
-  const message =
-    document.getElementById("topupMessage");
-
-  const amount =
-    Number(amountInput?.value || 0);
-
-  const method =
-    methodInput?.value || "";
-
-  const reference =
-    referenceInput?.value.trim() || null;
-
-  const note =
-    noteInput?.value.trim() || null;
-
-  message.textContent = "";
-  message.className = "topup-message";
-
-  if(!Number.isFinite(amount) || amount <= 0){
-    message.textContent = "Enter a valid amount greater than $0.";
-    message.classList.add("error");
-    return;
-  }
-
-  if(amount > 10000){
-    message.textContent = "Top-up amount cannot exceed $10,000.";
-    message.classList.add("error");
-    return;
-  }
-
-  if(method === "whish_money" && !reference){
-    message.textContent = "Whish Money requires a transaction/reference ID.";
-    message.classList.add("error");
-    return;
-  }
-
-  button.disabled = true;
-  button.textContent = "Submitting...";
-
-  try{
-    const {
-      data,
-      error
-    } = await supabaseClient.rpc(
-      "request_topup",
-      {
-        p_amount: amount,
-        p_payment_method: method,
-        p_payment_reference: reference,
-        p_note: note
-      }
-    );
-
-    if(error){
-      console.error("[SUBLY] Top-up request error:", error);
-      message.textContent = error.message || "Could not submit top-up request.";
-      message.classList.add("error");
-      return;
-    }
-
-    if(!data?.success){
-      message.textContent = "Could not submit top-up request.";
-      message.classList.add("error");
-      return;
-    }
-
-    message.textContent = `Top-up request for ${money(amount)} submitted successfully. It is now pending admin review.`;
-    message.classList.add("success");
-
-    await loadTopups();
-
-    setTimeout(() => {
-      closeTopupModal();
-    }, 1100);
-
-  }catch(error){
-    console.error("[SUBLY] submitTopupRequest crashed:", error);
-    message.textContent = "Something went wrong while submitting the request.";
-    message.classList.add("error");
-  }finally{
-    button.disabled = false;
-    button.textContent = "Submit Top-up Request";
-  }
-}
-
-async function loadTopups(){
-  const container =
-    document.getElementById("topupHistory");
-
-  if(!container || !currentUser) return;
-
-  container.innerHTML = `
-    <div class="empty finance-empty">Loading top-up requests...</div>
-  `;
-
-  const {
-    data,
-    error
-  } = await supabaseClient
-    .from("topup_requests")
-    .select(`
-      id,
-      amount,
-      currency,
-      payment_method,
-      payment_reference,
-      note,
-      status,
-      reviewed_at,
-      created_at
-    `)
-    .eq("user_id", currentUser.id)
-    .order("created_at", { ascending:false });
-
-  if(error){
-    console.error("[SUBLY] Top-up history error:", error);
-    container.innerHTML = `
-      <div class="empty finance-empty">Could not load top-up history.</div>
-    `;
-    return;
-  }
-
-  const rows = data || [];
-
-  if(!rows.length){
-    container.innerHTML = `
-      <div class="empty finance-empty">
-        <div class="empty-icon">💳</div>
-        <div>No top-up requests yet.</div>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = rows.map(item => `
-    <div class="finance-item">
-      <div class="finance-main">
-        <div class="finance-title">${money(item.amount)} • ${escapeHtml(paymentMethodLabel(item.payment_method))}</div>
-        <div class="finance-sub">
-          ${item.payment_reference ? `Reference: ${escapeHtml(item.payment_reference)}` : "No payment reference"}
-          ${item.note ? ` • ${escapeHtml(item.note)}` : ""}
-        </div>
-      </div>
-
-      <div>
-        <div class="finance-label">Status</div>
-        <span class="badge ${escapeHtml(item.status || "pending")}">${escapeHtml(item.status || "pending")}</span>
-      </div>
-
-      <div>
-        <div class="finance-label">Amount</div>
-        <div class="finance-value">${money(item.amount)}</div>
-      </div>
-
-      <div class="finance-date">
-        <div class="finance-label">Submitted</div>
-        <div class="finance-value">${formatDateTime(item.created_at)}</div>
-      </div>
-    </div>
-  `).join("");
-}
-
-
-/* =========================
-   WALLET TRANSACTIONS
-========================= */
-
-function transactionLabel(type){
-  const labels = {
-    topup:"Top-up",
-    purchase:"Purchase",
-    renewal:"Renewal",
-    refund:"Refund",
-    adjustment:"Adjustment"
-  };
-
-  return labels[type] || type || "Transaction";
-}
-
-async function loadTransactions(){
-  const container =
-    document.getElementById("transactionsList");
-
-  if(!container || !currentUser) return;
-
-  container.innerHTML = `
-    <div class="empty finance-empty">Loading transactions...</div>
-  `;
-
-  const {
-    data,
-    error
-  } = await supabaseClient
-    .from("wallet_transactions")
-    .select(`
-      id,
-      amount,
-      balance_after,
-      type,
-      description,
-      order_id,
-      topup_id,
-      created_at
-    `)
-    .eq("user_id", currentUser.id)
-    .order("created_at", { ascending:false });
-
-  if(error){
-    console.error("[SUBLY] Transactions error:", error);
-    container.innerHTML = `
-      <div class="empty finance-empty">Could not load transaction history.</div>
-    `;
-    return;
-  }
-
-  const rows = data || [];
-
-  if(!rows.length){
-    container.innerHTML = `
-      <div class="empty finance-empty">
-        <div class="empty-icon">📜</div>
-        <div>No wallet transactions yet.</div>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = rows.map(item => {
-    const amount = Number(item.amount || 0);
-    const direction = amount >= 0 ? "credit" : "debit";
-    const sign = amount > 0 ? "+" : "";
-
-    return `
-      <div class="finance-item">
-        <div class="finance-main">
-          <div class="finance-title">${escapeHtml(transactionLabel(item.type))}</div>
-          <div class="finance-sub">${escapeHtml(item.description || "Wallet transaction")}</div>
-        </div>
-
-        <div>
-          <div class="finance-label">Amount</div>
-          <div class="tx-amount ${direction}">${sign}${money(amount)}</div>
-        </div>
-
-        <div>
-          <div class="finance-label">Balance After</div>
-          <div class="finance-value">${money(item.balance_after)}</div>
-        </div>
-
-        <div class="finance-date">
-          <div class="finance-label">Date</div>
-          <div class="finance-value">${formatDateTime(item.created_at)}</div>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
 
 
 /* =========================
@@ -2420,6 +2055,379 @@ function escapeHtml(value){
     .replaceAll("'","&#039;");
 
 }
+
+
+/* =========================
+   TOP-UPS / WALLET TRANSACTIONS
+========================= */
+
+function paymentMethodLabel(value){
+  if(value === "whish_money") return "Whish Money";
+  if(value === "cash") return "Cash";
+  if(value === "crypto") return "Crypto";
+  return value || "Unknown";
+}
+
+function formatDateTime(value){
+  if(!value) return "—";
+
+  return new Date(value).toLocaleString(
+    undefined,
+    {
+      year:"numeric",
+      month:"short",
+      day:"numeric",
+      hour:"2-digit",
+      minute:"2-digit"
+    }
+  );
+}
+
+function openTopupModal(){
+  const modal =
+    document.getElementById("topupModal");
+
+  if(!modal) return;
+
+  document.getElementById("topupAmount").value = "";
+  document.getElementById("topupMethod").value = "whish_money";
+  document.getElementById("topupReference").value = "";
+  document.getElementById("topupNote").value = "";
+
+  const message =
+    document.getElementById("topupMessage");
+
+  message.textContent = "";
+  message.className = "topup-message";
+
+  updateTopupMethodUI();
+  modal.classList.add("show");
+}
+
+function closeTopupModal(){
+  document
+    .getElementById("topupModal")
+    ?.classList.remove("show");
+}
+
+function updateTopupMethodUI(){
+  const method =
+    document.getElementById("topupMethod")?.value;
+
+  const instructions =
+    document.getElementById("topupInstructions");
+
+  const referenceGroup =
+    document.getElementById("topupReferenceGroup");
+
+  const referenceInput =
+    document.getElementById("topupReference");
+
+  const code =
+    currentProfile?.reseller_code ||
+    "your reseller code";
+
+  if(!instructions || !referenceGroup || !referenceInput){
+    return;
+  }
+
+  if(method === "cash"){
+    instructions.innerHTML = `
+      Arrange the cash payment with Subly, then submit the request here.
+      Your payment code is
+      <span class="payment-code">${escapeHtml(code)}</span>.
+      The reference field is optional for cash.
+    `;
+
+    referenceInput.required = false;
+    referenceInput.placeholder = "Optional cash receipt/reference";
+  }else{
+    instructions.innerHTML = `
+      Send the Whish Money payment first. Put
+      <span class="payment-code">${escapeHtml(code)}</span>
+      in the payment description, then enter the Whish transaction/reference ID below.
+    `;
+
+    referenceInput.required = true;
+    referenceInput.placeholder = "Required Whish transaction/reference ID";
+  }
+}
+
+async function submitTopupRequest(){
+  const amountInput =
+    document.getElementById("topupAmount");
+
+  const methodInput =
+    document.getElementById("topupMethod");
+
+  const referenceInput =
+    document.getElementById("topupReference");
+
+  const noteInput =
+    document.getElementById("topupNote");
+
+  const button =
+    document.getElementById("submitTopupButton");
+
+  const message =
+    document.getElementById("topupMessage");
+
+  const amount =
+    Number(amountInput?.value || 0);
+
+  const method =
+    methodInput?.value || "";
+
+  const reference =
+    referenceInput?.value.trim() || null;
+
+  const note =
+    noteInput?.value.trim() || null;
+
+  message.textContent = "";
+  message.className = "topup-message";
+
+  if(!Number.isFinite(amount) || amount <= 0){
+    message.textContent = "Enter a valid amount greater than $0.";
+    message.classList.add("error");
+    return;
+  }
+
+  if(amount > 10000){
+    message.textContent = "Top-up amount cannot exceed $10,000.";
+    message.classList.add("error");
+    return;
+  }
+
+  if(method === "whish_money" && !reference){
+    message.textContent = "Whish Money requires a transaction/reference ID.";
+    message.classList.add("error");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Submitting...";
+
+  try{
+    const {
+      data,
+      error
+    } = await supabaseClient.rpc(
+      "request_topup",
+      {
+        p_amount: amount,
+        p_payment_method: method,
+        p_payment_reference: reference,
+        p_note: note
+      }
+    );
+
+    if(error){
+      console.error("[SUBLY] Top-up request error:", error);
+      message.textContent = error.message || "Could not submit top-up request.";
+      message.classList.add("error");
+      return;
+    }
+
+    if(!data?.success){
+      message.textContent = "Could not submit top-up request.";
+      message.classList.add("error");
+      return;
+    }
+
+    message.textContent = `Top-up request for ${money(amount)} submitted successfully. It is now pending admin review.`;
+    message.classList.add("success");
+
+    await loadTopups();
+
+    setTimeout(() => {
+      closeTopupModal();
+    }, 1100);
+
+  }catch(error){
+    console.error("[SUBLY] submitTopupRequest crashed:", error);
+    message.textContent = "Something went wrong while submitting the request.";
+    message.classList.add("error");
+  }finally{
+    button.disabled = false;
+    button.textContent = "Submit Top-up Request";
+  }
+}
+
+async function loadTopups(){
+  const container =
+    document.getElementById("topupHistory");
+
+  if(!container || !currentUser) return;
+
+  container.innerHTML = `
+    <div class="empty finance-empty">Loading top-up requests...</div>
+  `;
+
+  const {
+    data,
+    error
+  } = await supabaseClient
+    .from("topup_requests")
+    .select(`
+      id,
+      amount,
+      currency,
+      payment_method,
+      payment_reference,
+      note,
+      status,
+      reviewed_at,
+      created_at
+    `)
+    .eq("user_id", currentUser.id)
+    .order("created_at", { ascending:false });
+
+  if(error){
+    console.error("[SUBLY] Top-up history error:", error);
+    container.innerHTML = `
+      <div class="empty finance-empty">Could not load top-up history.</div>
+    `;
+    return;
+  }
+
+  const rows = data || [];
+
+  if(!rows.length){
+    container.innerHTML = `
+      <div class="empty finance-empty">
+        <div class="empty-icon">💳</div>
+        <div>No top-up requests yet.</div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = rows.map(item => `
+    <div class="finance-item">
+      <div class="finance-main">
+        <div class="finance-title">${money(item.amount)} • ${escapeHtml(paymentMethodLabel(item.payment_method))}</div>
+        <div class="finance-sub">
+          ${item.payment_reference ? `Reference: ${escapeHtml(item.payment_reference)}` : "No payment reference"}
+          ${item.note ? ` • ${escapeHtml(item.note)}` : ""}
+        </div>
+      </div>
+
+      <div>
+        <div class="finance-label">Status</div>
+        <span class="badge ${escapeHtml(item.status || "pending")}">${escapeHtml(item.status || "pending")}</span>
+      </div>
+
+      <div>
+        <div class="finance-label">Amount</div>
+        <div class="finance-value">${money(item.amount)}</div>
+      </div>
+
+      <div class="finance-date">
+        <div class="finance-label">Submitted</div>
+        <div class="finance-value">${formatDateTime(item.created_at)}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+
+/* =========================
+   WALLET TRANSACTIONS
+========================= */
+
+function transactionLabel(type){
+  const labels = {
+    topup:"Top-up",
+    purchase:"Purchase",
+    renewal:"Renewal",
+    refund:"Refund",
+    adjustment:"Adjustment"
+  };
+
+  return labels[type] || type || "Transaction";
+}
+
+async function loadTransactions(){
+  const container =
+    document.getElementById("transactionsList");
+
+  if(!container || !currentUser) return;
+
+  container.innerHTML = `
+    <div class="empty finance-empty">Loading transactions...</div>
+  `;
+
+  const {
+    data,
+    error
+  } = await supabaseClient
+    .from("wallet_transactions")
+    .select(`
+      id,
+      amount,
+      balance_after,
+      type,
+      description,
+      order_id,
+      topup_id,
+      created_at
+    `)
+    .eq("user_id", currentUser.id)
+    .order("created_at", { ascending:false });
+
+  if(error){
+    console.error("[SUBLY] Transactions error:", error);
+    container.innerHTML = `
+      <div class="empty finance-empty">Could not load transaction history.</div>
+    `;
+    return;
+  }
+
+  const rows = data || [];
+
+  if(!rows.length){
+    container.innerHTML = `
+      <div class="empty finance-empty">
+        <div class="empty-icon">📜</div>
+        <div>No wallet transactions yet.</div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = rows.map(item => {
+    const amount = Number(item.amount || 0);
+    const direction = amount >= 0 ? "credit" : "debit";
+    const sign = amount > 0 ? "+" : "";
+
+    return `
+      <div class="finance-item">
+        <div class="finance-main">
+          <div class="finance-title">${escapeHtml(transactionLabel(item.type))}</div>
+          <div class="finance-sub">${escapeHtml(item.description || "Wallet transaction")}</div>
+        </div>
+
+        <div>
+          <div class="finance-label">Amount</div>
+          <div class="tx-amount ${direction}">${sign}${money(amount)}</div>
+        </div>
+
+        <div>
+          <div class="finance-label">Balance After</div>
+          <div class="finance-value">${money(item.balance_after)}</div>
+        </div>
+
+        <div class="finance-date">
+          <div class="finance-label">Date</div>
+          <div class="finance-value">${formatDateTime(item.created_at)}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+
 
 
 

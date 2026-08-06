@@ -959,6 +959,49 @@ button{
   letter-spacing:.5px;
 }
 
+.payment-id-row{
+  display:flex;
+  gap:9px;
+  align-items:stretch;
+}
+
+.payment-id-box{
+  flex:1;
+  min-width:0;
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  padding:0 13px;
+  border:1px solid var(--border);
+  background:#191720;
+  border-radius:10px;
+  font-weight:850;
+  letter-spacing:.6px;
+  overflow-wrap:anywhere;
+}
+
+.copy-payment-button{
+  min-width:100px;
+  border:1px solid rgba(155,77,255,.35);
+  background:rgba(155,77,255,.12);
+  color:#e4d4ff;
+  border-radius:10px;
+  padding:0 13px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.copy-payment-button:hover{
+  background:rgba(155,77,255,.2);
+}
+
+.payment-id-note{
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.45;
+  margin-top:7px;
+}
+
 .topup-message{
   min-height:18px;
   margin-top:12px;
@@ -1731,7 +1774,7 @@ img {
 
     <div class="panel-body">
       <div class="payment-help">
-        For <strong>Whish Money</strong>, send the payment first and put your reseller code in the payment description. Then submit the amount and transaction/reference ID here. For <strong>Cash</strong>, submit the request after arranging payment with Subly.
+        For <strong>Whish Money</strong>, copy your Payment ID and put it in the payment description when sending the money. Then return here and submit the amount. For <strong>Cash</strong>, arrange the payment with Subly and submit the request for admin verification.
       </div>
     </div>
 
@@ -1834,9 +1877,13 @@ img {
 
       <div class="payment-help" id="topupInstructions"></div>
 
-      <div class="form-group" id="topupReferenceGroup">
-        <label class="form-label" for="topupReference">Transaction / Reference ID</label>
-        <input class="form-input" id="topupReference" type="text" maxlength="120" autocomplete="off" placeholder="Enter the payment transaction/reference ID">
+      <div class="form-group">
+        <label class="form-label">Your Payment ID</label>
+        <div class="payment-id-row">
+          <div class="payment-id-box" id="topupPaymentCode">—</div>
+          <button class="copy-payment-button" id="copyPaymentCodeButton" type="button" onclick="copyPaymentCode()">📋 Copy</button>
+        </div>
+        <div class="payment-id-note">Use this exact ID in the payment description so the admin can identify your payment.</div>
       </div>
 
       <div class="form-group">
@@ -2083,20 +2130,19 @@ function formatDateTime(value){
   );
 }
 
-function openTopupModal(){
-  const modal =
-    document.getElementById("topupModal");
+function getPaymentCode(){
+  return currentProfile?.reseller_code || "";
+}
 
+function openTopupModal(){
+  const modal = document.getElementById("topupModal");
   if(!modal) return;
 
   document.getElementById("topupAmount").value = "";
   document.getElementById("topupMethod").value = "whish_money";
-  document.getElementById("topupReference").value = "";
   document.getElementById("topupNote").value = "";
 
-  const message =
-    document.getElementById("topupMessage");
-
+  const message = document.getElementById("topupMessage");
   message.textContent = "";
   message.className = "topup-message";
 
@@ -2105,84 +2151,91 @@ function openTopupModal(){
 }
 
 function closeTopupModal(){
-  document
-    .getElementById("topupModal")
-    ?.classList.remove("show");
+  document.getElementById("topupModal")?.classList.remove("show");
 }
 
 function updateTopupMethodUI(){
-  const method =
-    document.getElementById("topupMethod")?.value;
+  const method = document.getElementById("topupMethod")?.value;
+  const instructions = document.getElementById("topupInstructions");
+  const codeBox = document.getElementById("topupPaymentCode");
+  const code = getPaymentCode();
 
-  const instructions =
-    document.getElementById("topupInstructions");
-
-  const referenceGroup =
-    document.getElementById("topupReferenceGroup");
-
-  const referenceInput =
-    document.getElementById("topupReference");
-
-  const code =
-    currentProfile?.reseller_code ||
-    "your reseller code";
-
-  if(!instructions || !referenceGroup || !referenceInput){
-    return;
+  if(codeBox){
+    codeBox.textContent = code || "Payment ID unavailable";
   }
+
+  if(!instructions) return;
 
   if(method === "cash"){
     instructions.innerHTML = `
-      Arrange the cash payment with Subly, then submit the request here.
-      Your payment code is
-      <span class="payment-code">${escapeHtml(code)}</span>.
-      The reference field is optional for cash.
+      <strong>How to add funds with Cash:</strong><br>
+      1. Arrange the cash payment with Subly.<br>
+      2. Tell the admin your Payment ID:
+      <span class="payment-code">${escapeHtml(code || "Unavailable")}</span><br>
+      3. Enter the amount you are paying and submit the request.<br>
+      4. Your wallet will only be credited after the admin receives and approves the payment.
     `;
-
-    referenceInput.required = false;
-    referenceInput.placeholder = "Optional cash receipt/reference";
   }else{
     instructions.innerHTML = `
-      Send the Whish Money payment first. Put
-      <span class="payment-code">${escapeHtml(code)}</span>
-      in the payment description, then enter the Whish transaction/reference ID below.
+      <strong>How to add funds with Whish Money:</strong><br>
+      1. Copy your Payment ID below.<br>
+      2. Send the money through Whish Money.<br>
+      3. Put your Payment ID
+      <span class="payment-code">${escapeHtml(code || "Unavailable")}</span>
+      in the <strong>payment description</strong>.<br>
+      4. Return here, enter the exact amount you sent, and submit the request.<br>
+      5. Your wallet will be credited after the admin verifies and approves the payment.
     `;
+  }
+}
 
-    referenceInput.required = true;
-    referenceInput.placeholder = "Required Whish transaction/reference ID";
+async function copyPaymentCode(){
+  const code = getPaymentCode();
+  const button = document.getElementById("copyPaymentCodeButton");
+  const message = document.getElementById("topupMessage");
+
+  if(!code){
+    if(message){
+      message.textContent = "Your Payment ID is not available yet.";
+      message.className = "topup-message error";
+    }
+    return;
+  }
+
+  try{
+    await navigator.clipboard.writeText(code);
+  }catch(error){
+    const temp = document.createElement("textarea");
+    temp.value = code;
+    temp.style.position = "fixed";
+    temp.style.opacity = "0";
+    document.body.appendChild(temp);
+    temp.focus();
+    temp.select();
+    document.execCommand("copy");
+    temp.remove();
+  }
+
+  if(button){
+    const oldText = button.textContent;
+    button.textContent = "✓ Copied";
+    setTimeout(() => {
+      button.textContent = oldText;
+    }, 1400);
   }
 }
 
 async function submitTopupRequest(){
-  const amountInput =
-    document.getElementById("topupAmount");
+  const amountInput = document.getElementById("topupAmount");
+  const methodInput = document.getElementById("topupMethod");
+  const noteInput = document.getElementById("topupNote");
+  const button = document.getElementById("submitTopupButton");
+  const message = document.getElementById("topupMessage");
 
-  const methodInput =
-    document.getElementById("topupMethod");
-
-  const referenceInput =
-    document.getElementById("topupReference");
-
-  const noteInput =
-    document.getElementById("topupNote");
-
-  const button =
-    document.getElementById("submitTopupButton");
-
-  const message =
-    document.getElementById("topupMessage");
-
-  const amount =
-    Number(amountInput?.value || 0);
-
-  const method =
-    methodInput?.value || "";
-
-  const reference =
-    referenceInput?.value.trim() || null;
-
-  const note =
-    noteInput?.value.trim() || null;
+  const amount = Number(amountInput?.value || 0);
+  const method = methodInput?.value || "";
+  const note = noteInput?.value.trim() || null;
+  const paymentCode = getPaymentCode();
 
   message.textContent = "";
   message.className = "topup-message";
@@ -2199,8 +2252,14 @@ async function submitTopupRequest(){
     return;
   }
 
-  if(method === "whish_money" && !reference){
-    message.textContent = "Whish Money requires a transaction/reference ID.";
+  if(!["whish_money","cash"].includes(method)){
+    message.textContent = "Choose a valid payment method.";
+    message.classList.add("error");
+    return;
+  }
+
+  if(!paymentCode){
+    message.textContent = "Your Payment ID is unavailable. Please contact the admin.";
     message.classList.add("error");
     return;
   }
@@ -2209,15 +2268,12 @@ async function submitTopupRequest(){
   button.textContent = "Submitting...";
 
   try{
-    const {
-      data,
-      error
-    } = await supabaseClient.rpc(
+    const { data, error } = await supabaseClient.rpc(
       "request_topup",
       {
         p_amount: amount,
         p_payment_method: method,
-        p_payment_reference: reference,
+        p_payment_reference: paymentCode,
         p_note: note
       }
     );
@@ -2235,14 +2291,14 @@ async function submitTopupRequest(){
       return;
     }
 
-    message.textContent = `Top-up request for ${money(amount)} submitted successfully. It is now pending admin review.`;
+    message.textContent = `Top-up request for ${money(amount)} submitted. It is now pending admin verification.`;
     message.classList.add("success");
 
     await loadTopups();
 
     setTimeout(() => {
       closeTopupModal();
-    }, 1100);
+    }, 1200);
 
   }catch(error){
     console.error("[SUBLY] submitTopupRequest crashed:", error);
@@ -2255,19 +2311,14 @@ async function submitTopupRequest(){
 }
 
 async function loadTopups(){
-  const container =
-    document.getElementById("topupHistory");
-
+  const container = document.getElementById("topupHistory");
   if(!container || !currentUser) return;
 
   container.innerHTML = `
     <div class="empty finance-empty">Loading top-up requests...</div>
   `;
 
-  const {
-    data,
-    error
-  } = await supabaseClient
+  const { data, error } = await supabaseClient
     .from("topup_requests")
     .select(`
       id,
@@ -2308,7 +2359,7 @@ async function loadTopups(){
       <div class="finance-main">
         <div class="finance-title">${money(item.amount)} • ${escapeHtml(paymentMethodLabel(item.payment_method))}</div>
         <div class="finance-sub">
-          ${item.payment_reference ? `Reference: ${escapeHtml(item.payment_reference)}` : "No payment reference"}
+          Payment ID: ${escapeHtml(item.payment_reference || "—")}
           ${item.note ? ` • ${escapeHtml(item.note)}` : ""}
         </div>
       </div>
@@ -2531,6 +2582,11 @@ async function checkReseller(){
 
 
     currentProfile = profile;
+
+    const walletCodeElement = document.getElementById("walletResellerCode");
+    if(walletCodeElement){
+      walletCodeElement.textContent = profile.reseller_code || "—";
+    }
 
 
     document.getElementById(

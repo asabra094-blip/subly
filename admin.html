@@ -767,6 +767,19 @@
     grid-template-columns:1fr;
   }
 }
+  .brand-logo {
+  width: 120px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.loader-logo {
+  width: 150px;
+  height: auto;
+  display: block;
+  margin: 0 auto 12px;
+}
   </style>
 </head>
 
@@ -774,7 +787,7 @@
 
 <div id="loadingScreen">
   <div class="loader-box">
-    <h1>SUBLY</h1>
+    <img src="subly-logo.png.PNG" class="loader-logo" alt="Subly">
     <p id="loadingText">Checking admin access...</p>
   </div>
 </div>
@@ -784,9 +797,9 @@
   <aside class="sidebar">
 
     <div class="brand">
-      <div class="brand-title">SUB<span>LY</span></div>
-      <div class="brand-sub">ADMIN CONTROL</div>
-    </div>
+  <img src="subly-logo.png.PNG" class="brand-logo" alt="Subly">
+  <div class="brand-sub">ADMIN CONTROL</div>
+</div>
 
     <nav class="nav">
 

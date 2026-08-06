@@ -190,6 +190,115 @@
       cursor:not-allowed;
     }
 
+
+    .manage-summary{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    .manage-summary-card{
+      min-width:0;
+      border:1px solid var(--border);
+      background:#17151f;
+      border-radius:11px;
+      padding:12px;
+    }
+
+    .manage-summary-label{
+      color:var(--muted);
+      font-size:10px;
+      margin-bottom:5px;
+    }
+
+    .manage-summary-value{
+      font-size:13px;
+      font-weight:800;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+
+    .manage-section{
+      margin-top:16px;
+      padding-top:16px;
+      border-top:1px solid var(--border);
+    }
+
+    .manage-section-title{
+      font-size:13px;
+      font-weight:850;
+      margin-bottom:10px;
+    }
+
+    .manage-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .manage-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:14px;
+    }
+
+    .manage-button{
+      min-height:44px;
+      border-radius:10px;
+      font-weight:850;
+      cursor:pointer;
+      padding:10px 13px;
+    }
+
+    .manage-button.primary{
+      border:0;
+      color:#fff;
+      background:linear-gradient(135deg,var(--purple),var(--pink));
+    }
+
+    .manage-button.secondary{
+      border:1px solid var(--border);
+      background:#191720;
+      color:#fff;
+    }
+
+    .manage-button.danger{
+      border:1px solid rgba(255,92,114,.35);
+      background:rgba(255,92,114,.09);
+      color:var(--red);
+    }
+
+    .manage-message{
+      min-height:18px;
+      margin-top:12px;
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .manage-message.error{color:var(--red)}
+    .manage-message.success{color:var(--green)}
+
+    .manage-list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      max-height:220px;
+      overflow:auto;
+    }
+
+    .manage-list-item{
+      border:1px solid var(--border);
+      background:#111018;
+      border-radius:10px;
+      padding:10px 11px;
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .manage-list-item strong{font-size:12px}
+
     .status-badge.approved{color:var(--green)}
     .status-badge.rejected{color:var(--red)}
 
@@ -308,6 +417,7 @@
       .topup-actions{display:grid;grid-template-columns:1fr 1fr}
       .topup-button{width:100%}
       .topup-refresh{width:100%}
+      .manage-summary,.manage-grid,.manage-actions{grid-template-columns:1fr}
     }
 
     @media(max-width:430px){.topbar{padding:0 11px}.status{font-size:0;gap:0}.status .dot{display:block}.content{padding-left:10px;padding-right:10px}.stats{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.order-top{flex-direction:column}.order-details{grid-template-columns:1fr}.reseller-row{grid-template-columns:1fr}.reseller-row>div{grid-column:1!important}.badge{width:max-content}.panel{border-radius:14px}}
@@ -1623,7 +1733,8 @@ async function loadResellers() {
           <button
             class="action"
             style="padding:8px 12px;"
-            disabled
+            type="button"
+            onclick="openResellerManage('${reseller.id}')"
           >
             Manage
           </button>
@@ -1644,6 +1755,295 @@ async function loadResellers() {
     `;
   }
 }
+
+let selectedManagedResellerId = null;
+
+async function openResellerManage(resellerId) {
+  selectedManagedResellerId = resellerId;
+
+  const modal = document.getElementById("manageResellerModal");
+  const message = document.getElementById("manageResellerMessage");
+
+  if (!modal) return;
+
+  message.textContent = "";
+  message.className = "manage-message";
+
+  modal.classList.add("show");
+
+  document.getElementById("manageBusiness").textContent = "Loading...";
+  document.getElementById("manageUsername").textContent = "Loading...";
+  document.getElementById("managePaymentId").textContent = "Loading...";
+  document.getElementById("manageWalletBalance").textContent = "Loading...";
+  document.getElementById("manageOrderCount").textContent = "Loading...";
+  document.getElementById("manageCreatedAt").textContent = "Loading...";
+  document.getElementById("manageTransactions").innerHTML =
+    `<div class="manage-list-item">Loading...</div>`;
+
+  try {
+    const [
+      profileResult,
+      walletResult,
+      ordersResult,
+      transactionsResult
+    ] = await Promise.all([
+      supabaseClient
+        .from("profiles")
+        .select(`
+          id,
+          username,
+          business_name,
+          reseller_code,
+          tier,
+          status,
+          created_at
+        `)
+        .eq("id", resellerId)
+        .single(),
+
+      supabaseClient
+        .from("wallets")
+        .select("balance")
+        .eq("user_id", resellerId)
+        .maybeSingle(),
+
+      supabaseClient
+        .from("orders")
+        .select("*", { count:"exact", head:true })
+        .eq("user_id", resellerId),
+
+      supabaseClient
+        .from("wallet_transactions")
+        .select(`
+          id,
+          amount,
+          balance_after,
+          type,
+          description,
+          created_at
+        `)
+        .eq("user_id", resellerId)
+        .order("created_at", { ascending:false })
+        .limit(8)
+    ]);
+
+    if (profileResult.error || !profileResult.data) {
+      throw profileResult.error || new Error("Reseller not found");
+    }
+
+    const profile = profileResult.data;
+
+    document.getElementById("manageBusiness").textContent =
+      profile.business_name || "—";
+
+    document.getElementById("manageUsername").textContent =
+      profile.username || "—";
+
+    document.getElementById("managePaymentId").textContent =
+      profile.reseller_code || "—";
+
+    document.getElementById("manageWalletBalance").textContent =
+      money(walletResult.data?.balance || 0);
+
+    document.getElementById("manageOrderCount").textContent =
+      ordersResult.count ?? 0;
+
+    document.getElementById("manageCreatedAt").textContent =
+      formatDateTime(profile.created_at);
+
+    document.getElementById("manageTier").value =
+      profile.tier || "bronze";
+
+    document.getElementById("manageStatus").value =
+      profile.status || "inactive";
+
+    const rows = transactionsResult.data || [];
+    const txContainer = document.getElementById("manageTransactions");
+
+    if (transactionsResult.error) {
+      txContainer.innerHTML =
+        `<div class="manage-list-item">Could not load wallet activity.</div>`;
+    } else if (!rows.length) {
+      txContainer.innerHTML =
+        `<div class="manage-list-item">No wallet transactions yet.</div>`;
+    } else {
+      txContainer.innerHTML = rows.map(item => {
+        const amount = Number(item.amount || 0);
+        const sign = amount > 0 ? "+" : "";
+
+        return `
+          <div class="manage-list-item">
+            <strong>${escapeHtml(item.type || "Transaction")}</strong>
+            • ${sign}${money(amount)}
+            • Balance: ${money(item.balance_after)}
+            <br>
+            <span style="color:var(--muted);">
+              ${escapeHtml(item.description || "")}
+              ${item.description ? " • " : ""}
+              ${escapeHtml(formatDateTime(item.created_at))}
+            </span>
+          </div>
+        `;
+      }).join("");
+    }
+
+  } catch (error) {
+    console.error("[SUBLY] openResellerManage error:", error);
+
+    message.textContent =
+      error?.message || "Could not load reseller details.";
+
+    message.classList.add("error");
+  }
+}
+
+function closeResellerManage() {
+  document
+    .getElementById("manageResellerModal")
+    ?.classList.remove("show");
+
+  selectedManagedResellerId = null;
+}
+
+async function saveResellerSettings() {
+  if (!selectedManagedResellerId) return;
+
+  const tier = document.getElementById("manageTier").value;
+  const status = document.getElementById("manageStatus").value;
+  const button = document.getElementById("saveResellerSettingsButton");
+  const message = document.getElementById("manageResellerMessage");
+
+  message.textContent = "";
+  message.className = "manage-message";
+
+  button.disabled = true;
+  button.textContent = "Saving...";
+
+  try {
+    const { data, error } = await supabaseClient.rpc(
+      "admin_update_reseller",
+      {
+        p_user_id: selectedManagedResellerId,
+        p_tier: tier,
+        p_status: status
+      }
+    );
+
+    if (error) {
+      console.error("[SUBLY] admin_update_reseller error:", error);
+      message.textContent =
+        error.message || "Could not update reseller.";
+      message.classList.add("error");
+      return;
+    }
+
+    if (!data?.success) {
+      message.textContent = "Could not update reseller.";
+      message.classList.add("error");
+      return;
+    }
+
+    message.textContent = "Reseller settings updated successfully.";
+    message.classList.add("success");
+
+    await Promise.all([
+      loadResellers(),
+      loadDashboard()
+    ]);
+
+  } catch (error) {
+    console.error("[SUBLY] saveResellerSettings crashed:", error);
+    message.textContent = "Something went wrong.";
+    message.classList.add("error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Save Account Settings";
+  }
+}
+
+async function adjustResellerWallet() {
+  if (!selectedManagedResellerId) return;
+
+  const amountInput = document.getElementById("manageWalletAmount");
+  const noteInput = document.getElementById("manageWalletNote");
+  const button = document.getElementById("adjustWalletButton");
+  const message = document.getElementById("manageResellerMessage");
+
+  const amount = Number(amountInput.value || 0);
+  const note = noteInput.value.trim();
+
+  message.textContent = "";
+  message.className = "manage-message";
+
+  if (!Number.isFinite(amount) || amount === 0) {
+    message.textContent =
+      "Enter a positive amount to add funds or a negative amount to deduct funds.";
+    message.classList.add("error");
+    return;
+  }
+
+  if (!note) {
+    message.textContent = "Enter a reason for the wallet adjustment.";
+    message.classList.add("error");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Apply ${amount > 0 ? "+" : ""}${money(amount)} to this reseller's wallet?`
+  );
+
+  if (!confirmed) return;
+
+  button.disabled = true;
+  button.textContent = "Applying...";
+
+  try {
+    const { data, error } = await supabaseClient.rpc(
+      "admin_adjust_wallet",
+      {
+        p_user_id: selectedManagedResellerId,
+        p_amount: amount,
+        p_note: note
+      }
+    );
+
+    if (error) {
+      console.error("[SUBLY] admin_adjust_wallet error:", error);
+      message.textContent =
+        error.message || "Could not adjust wallet.";
+      message.classList.add("error");
+      return;
+    }
+
+    if (!data?.success) {
+      message.textContent = "Could not adjust wallet.";
+      message.classList.add("error");
+      return;
+    }
+
+    message.textContent =
+      `Wallet updated. New balance: ${money(data.new_balance)}`;
+    message.classList.add("success");
+
+    amountInput.value = "";
+    noteInput.value = "";
+
+    await Promise.all([
+      openResellerManage(selectedManagedResellerId),
+      loadDashboard()
+    ]);
+
+  } catch (error) {
+    console.error("[SUBLY] adjustResellerWallet crashed:", error);
+    message.textContent = "Something went wrong.";
+    message.classList.add("error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Apply Wallet Adjustment";
+  }
+}
+
+
   /* =========================
    RESELLER MODAL
 ========================= */
@@ -2517,6 +2917,137 @@ function openCancelRenewal(renewalId) {
 
 }
 </script>
+
+
+  <div id="manageResellerModal" class="modal">
+    <div class="modal-card" style="width:min(620px,100%);">
+
+      <div class="modal-head">
+        <div>
+          <h2>Manage Reseller</h2>
+          <p>View reseller activity and update account settings.</p>
+        </div>
+
+        <button class="modal-close" type="button" onclick="closeResellerManage()">✕</button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="manage-summary">
+          <div class="manage-summary-card">
+            <div class="manage-summary-label">Business</div>
+            <div class="manage-summary-value" id="manageBusiness">—</div>
+          </div>
+
+          <div class="manage-summary-card">
+            <div class="manage-summary-label">Username</div>
+            <div class="manage-summary-value" id="manageUsername">—</div>
+          </div>
+
+          <div class="manage-summary-card">
+            <div class="manage-summary-label">Payment ID</div>
+            <div class="manage-summary-value" id="managePaymentId">—</div>
+          </div>
+
+          <div class="manage-summary-card">
+            <div class="manage-summary-label">Wallet Balance</div>
+            <div class="manage-summary-value" id="manageWalletBalance">$0.00</div>
+          </div>
+
+          <div class="manage-summary-card">
+            <div class="manage-summary-label">Total Orders</div>
+            <div class="manage-summary-value" id="manageOrderCount">0</div>
+          </div>
+
+          <div class="manage-summary-card">
+            <div class="manage-summary-label">Account Created</div>
+            <div class="manage-summary-value" id="manageCreatedAt">—</div>
+          </div>
+        </div>
+
+        <div class="manage-section">
+          <div class="manage-section-title">Account Settings</div>
+
+          <div class="manage-grid">
+            <div>
+              <label for="manageTier">Tier</label>
+              <select id="manageTier">
+                <option value="bronze">Bronze</option>
+                <option value="silver">Silver</option>
+                <option value="gold">Gold</option>
+                <option value="diamond">Diamond</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="manageStatus">Status</label>
+              <select id="manageStatus">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            class="manage-button primary"
+            id="saveResellerSettingsButton"
+            type="button"
+            style="width:100%;margin-top:12px;"
+            onclick="saveResellerSettings()"
+          >
+            Save Account Settings
+          </button>
+        </div>
+
+        <div class="manage-section">
+          <div class="manage-section-title">Wallet Adjustment</div>
+
+          <div class="manage-grid">
+            <div>
+              <label for="manageWalletAmount">Amount</label>
+              <input
+                id="manageWalletAmount"
+                type="number"
+                step="0.01"
+                placeholder="Example: 10 or -5"
+              >
+            </div>
+
+            <div>
+              <label for="manageWalletNote">Reason</label>
+              <input
+                id="manageWalletNote"
+                type="text"
+                maxlength="160"
+                placeholder="Reason for adjustment"
+              >
+            </div>
+          </div>
+
+          <button
+            class="manage-button secondary"
+            id="adjustWalletButton"
+            type="button"
+            style="width:100%;margin-top:12px;"
+            onclick="adjustResellerWallet()"
+          >
+            Apply Wallet Adjustment
+          </button>
+        </div>
+
+        <div class="manage-section">
+          <div class="manage-section-title">Recent Wallet Activity</div>
+          <div class="manage-list" id="manageTransactions">
+            <div class="manage-list-item">Loading...</div>
+          </div>
+        </div>
+
+        <div class="manage-message" id="manageResellerMessage"></div>
+
+      </div>
+    </div>
+  </div>
 
   <div id="resellerModal" class="modal">
   <div class="modal-card">

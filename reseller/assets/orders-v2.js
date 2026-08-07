@@ -7,7 +7,8 @@ async function loadResellerOrdersV2(){
   const {data:orders,error}=await supabaseClient.from("orders").select(`
     id,order_number,user_id,customer_id,product_id,price_paid,status,
     customer_profile_name,created_at,activated_at,expires_at,
-    delivery_account,delivery_profile,delivery_url,rejection_reason
+    delivery_account,delivery_password,delivery_profile,delivery_pin,
+    delivery_url,delivery_notes,rejection_reason
   `).eq("user_id",currentUser.id).order("created_at",{ascending:false});
 
   if(error){console.error("[SUBLY] reseller orders v2",error);container.innerHTML=`<div class="empty">${escapeHtml(error.message||"Could not load orders.")}</div>`;return;}
@@ -38,7 +39,7 @@ async function loadResellerOrdersV2(){
         <div class="info-box"><div class="info-label">Status</div><div class="info-value">${escapeHtml(order.status||"unknown")}</div></div>
       </div>
       ${order.status==="refunded"?`<div class="reseller-refund-note">Refunded to wallet${order.rejection_reason?` • ${escapeHtml(order.rejection_reason)}`:""}</div>`:""}
-      ${order.status==="delivered"?`<div class="reseller-delivery-note"><strong>Delivered:</strong> ${escapeHtml(order.delivery_account||"Account ready")}${order.delivery_profile?` • Profile: ${escapeHtml(order.delivery_profile)}`:""}${order.delivery_url?` • <a href="${escapeHtml(order.delivery_url)}" target="_blank" rel="noopener">Open link</a>`:""}</div>`:""}
+      ${order.status==="delivered"?`<div class="reseller-delivery-note"><strong>Delivered account</strong><br>${order.delivery_account?`Account: ${escapeHtml(order.delivery_account)}<br>`:""}${order.delivery_password?`Password: ${escapeHtml(order.delivery_password)}<br>`:""}${order.delivery_profile?`Profile: ${escapeHtml(order.delivery_profile)}<br>`:""}${order.delivery_pin?`PIN: ${escapeHtml(order.delivery_pin)}<br>`:""}${order.delivery_url?`Link: <a href="${escapeHtml(order.delivery_url)}" target="_blank" rel="noopener">Open delivery link</a><br>`:""}${order.delivery_notes?`Notes: ${escapeHtml(order.delivery_notes)}`:""}</div>`:""}
     </article>`;
   }).join("");
 }

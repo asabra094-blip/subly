@@ -8,23 +8,22 @@ function subPriceFor(id){return subscriptionPrices.find(x=>x.product_id===id)?.p
 function subProduct(order){return subscriptionProducts.find(x=>x.id===order.product_id)||{}}
 function subCustomer(order){return subscriptionCustomers.find(x=>x.id===order.customer_id)||null}
 function isNetflix(p){return String(p?.app_name||'').toLowerCase()==='netflix'}
-function renewalPendingFor(orderId){return pendingRenewals.some(x=>x.renewal_of_order_id===orderId)}
+function renewalPendingFor(orderId){return pendingRenewals.some(x=>x.order_id===orderId)}
 function issueFor(orderId){return openIssues.find(x=>x.order_id===orderId)}
 
 async function loadSubscriptionsPage(){
  const root=document.getElementById('subscriptionsList');if(!root||!currentUser)return;root.innerHTML='<div class="empty">Loading subscriptions...</div>';
- const {data:orders,error}=await supabaseClient.from('orders').select('id,order_number,customer_id,product_id,price_paid,status,order_kind,renewal_of_order_id,customer_profile_name,activated_at,expires_at,delivery_account,delivery_password,delivery_profile,delivery_pin,delivery_url,delivery_notes,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+ const {data:orders,error}=await supabaseClient.from('orders').select('id,order_number,customer_id,product_id,price_paid,status,customer_profile_name,activated_at,expires_at,delivery_account,delivery_password,delivery_profile,delivery_pin,delivery_url,delivery_notes,created_at').eq('user_id',currentUser.id).eq('status','delivered').order('created_at',{ascending:false});
  if(error){console.error('[SUBLY] subscriptions',error);root.innerHTML='<div class="empty">Could not load subscriptions.</div>';return}
- const delivered=(orders||[]).filter(o=>o.status==='delivered');pendingRenewals=(orders||[]).filter(o=>o.status==='processing'&&o.order_kind==='renewal');
- const productIds=[...new Set((orders||[]).map(x=>x.product_id).filter(Boolean))];
- const customerIds=[...new Set(delivered.map(x=>x.customer_id).filter(Boolean))];
- const [pr,cr,prices,issues]=await Promise.all([
-  productIds.length?supabaseClient.from('products').select('id,app_name,account_type,duration,logo_url,active,sort_order').in('id',productIds):Promise.resolve({data:[]}),
+ const delivered=orders||[],customerIds=[...new Set(delivered.map(x=>x.customer_id).filter(Boolean))];
+ const [pr,cr,prices,issues,renewals]=await Promise.all([
+  supabaseClient.from('products').select('id,app_name,account_type,duration,logo_url,active,sort_order').order('sort_order').order('app_name'),
   customerIds.length?supabaseClient.from('customers').select('id,first_name,last_name,phone').in('id',customerIds):Promise.resolve({data:[]}),
   supabaseClient.from('product_prices').select('product_id,tier,price').eq('tier',currentProfile.tier),
-  supabaseClient.from('subscription_issues').select('id,order_id,issue_type,status,admin_note,created_at').eq('reseller_id',currentUser.id).in('status',['open','in_progress'])
+  supabaseClient.from('subscription_issues').select('id,order_id,issue_type,status,admin_note,created_at').eq('reseller_id',currentUser.id).in('status',['open','in_progress']),
+  supabaseClient.from('renewals').select('id,order_id,status,created_at').eq('user_id',currentUser.id).eq('status','pending')
  ]);
- subscriptionRows=delivered;subscriptionProducts=pr.data||[];subscriptionCustomers=cr.data||[];subscriptionPrices=prices.data||[];openIssues=issues.data||[];
+ subscriptionRows=delivered;subscriptionProducts=pr.data||[];subscriptionCustomers=cr.data||[];subscriptionPrices=prices.data||[];openIssues=issues.data||[];pendingRenewals=renewals.data||[];
  const apps=[...new Set(delivered.filter(o=>subDaysLeft(o.expires_at)>=0).map(o=>subProduct(o).app_name).filter(Boolean))];if(!openGroups.size&&apps[0])openGroups.add(apps[0]);renderSubscriptionsPage();
 }
 function renderSubscriptionsPage(){
@@ -46,7 +45,7 @@ function toggleExpiredSection(){expiredOpen=!expiredOpen;renderSubscriptionsPage
 
 function openRenewalModal(orderId){const o=subscriptionRows.find(x=>x.id===orderId);if(!o)return;const p=subProduct(o),days=subDaysLeft(o.expires_at);if(days>5){alert('Renewal becomes available 5 days before expiry.');return}selectedRenewalOrder=o;document.getElementById('renewalSubtitle').textContent=`${p.app_name||'Subscription'} • ${p.account_type||'Standard'} • ${subscriptionFullName(subCustomer(o))}`;const choices=subscriptionProducts.filter(x=>x.active!==false&&x.app_name===p.app_name&&(x.account_type||'Standard')===(p.account_type||'Standard')&&subPriceFor(x.id)!=null).sort((a,b)=>subDurationMonths(a.duration)-subDurationMonths(b.duration));document.getElementById('renewalOptions').innerHTML=choices.length?choices.map(x=>`<button class="renewal-choice" onclick="submitRenewal('${x.id}',this)"><span><strong>${escapeHtml(x.duration)}</strong><small>${escapeHtml(x.account_type||'Standard')}</small></span><b>${money(subPriceFor(x.id))}</b></button>`).join(''):'<div class="empty">No renewal options are available.</div>';document.getElementById('renewalMessage').textContent='';document.getElementById('renewalModal').classList.add('show')}
 function closeRenewalModal(){document.getElementById('renewalModal')?.classList.remove('show');selectedRenewalOrder=null}
-async function submitRenewal(productId,button){if(!selectedRenewalOrder)return;const msg=document.getElementById('renewalMessage');document.querySelectorAll('.renewal-choice').forEach(x=>x.disabled=true);button.classList.add('loading');const{data,error}=await supabaseClient.rpc('place_subscription_renewal',{p_original_order_id:selectedRenewalOrder.id,p_product_id:productId});if(error){msg.textContent=error.message||'Could not place renewal.';msg.className='sub-form-message error';document.querySelectorAll('.renewal-choice').forEach(x=>x.disabled=false);button.classList.remove('loading');return}msg.textContent=`Renewal order #${data?.[0]?.order_number||''} placed. ${money(data?.[0]?.charged||0)} charged.`;msg.className='sub-form-message success';setTimeout(async()=>{closeRenewalModal();await loadSubscriptionsPage()},900)}
+async function submitRenewal(productId,button){if(!selectedRenewalOrder)return;const msg=document.getElementById('renewalMessage');document.querySelectorAll('.renewal-choice').forEach(x=>x.disabled=true);button.classList.add('loading');const{data,error}=await supabaseClient.rpc('request_renewal',{p_order_id:selectedRenewalOrder.id,p_renewal_product_id:productId});if(error){msg.textContent=error.message||'Could not place renewal.';msg.className='sub-form-message error';document.querySelectorAll('.renewal-choice').forEach(x=>x.disabled=false);button.classList.remove('loading');return}msg.textContent=`Renewal #${data?.[0]?.renewal_number||''} placed. ${money(data?.[0]?.charged||0)} charged.`;msg.className='sub-form-message success';setTimeout(async()=>{closeRenewalModal();await loadSubscriptionsPage()},900)}
 
 function openIssueModal(orderId){const o=subscriptionRows.find(x=>x.id===orderId);if(!o)return;selectedIssueOrder=o;const p=subProduct(o);document.getElementById('issueSubtitle').textContent=`${p.app_name||'Subscription'} • ${subscriptionFullName(subCustomer(o))}`;document.getElementById('issueType').value='account_not_working';document.getElementById('issueDetails').value='';document.getElementById('issueMessage').textContent='';document.getElementById('issueModal').classList.add('show')}
 function closeIssueModal(){document.getElementById('issueModal')?.classList.remove('show');selectedIssueOrder=null}

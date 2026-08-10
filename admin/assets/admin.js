@@ -1,4 +1,29 @@
 /* Subly admin shared shell — auth, helpers, navigation and dashboard only. */
+(function applySublyBranding(){
+  const style=document.createElement('style');
+  style.id='subly-branding';
+  style.textContent=`
+    .brand-logo,.loader-logo{
+      width:120px!important;
+      height:120px!important;
+      border-radius:50%!important;
+      object-fit:cover!important;
+      object-position:center!important;
+      display:block!important;
+      overflow:hidden!important;
+      background:#08080c!important;
+      box-shadow:0 0 0 1px rgba(255,255,255,.08),0 16px 48px rgba(139,92,255,.18)!important;
+    }
+    .loader-logo{width:145px!important;height:145px!important;animation:sublyBrandFloat 4s ease-in-out infinite!important;}
+    @keyframes sublyBrandFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    @media(prefers-reduced-motion:reduce){.loader-logo{animation:none!important}}
+  `;
+  document.head.appendChild(style);
+  let icon=document.querySelector('link[rel="icon"]');
+  if(!icon){icon=document.createElement('link');icon.rel='icon';document.head.appendChild(icon)}
+  icon.type='image/svg+xml';icon.href='../favicon.svg';
+})();
+
 const SUPABASE_URL='https://ymcvuwovcrqbhuhrjerd.supabase.co';
 const SUPABASE_KEY='sb_publishable_Hu2aLWbK4YjkTPevo6TRtw_dRO4BIPc';
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);

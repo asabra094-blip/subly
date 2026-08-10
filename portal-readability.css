@@ -3,6 +3,9 @@
 
 :root{--subly-text-xs:10px;--subly-text-sm:11.5px;--subly-text-md:13px;--subly-text-lg:14.5px}
 
+/* Prevent double-tap zoom on interactive portal UI while keeping normal page pinch zoom available. */
+html,body,a,button,input,select,textarea,label,[role="button"]{touch-action:manipulation}
+
 /* Shared shell */
 .nav-btn{font-size:13px!important}.brand-sub{font-size:10px!important}.page-title{font-size:18px!important}.online,.status{font-size:11px!important}.logout{font-size:12px!important}.account-name,.admin-name{font-size:13px!important}.account-tier,.admin-role{font-size:10.5px!important}.welcome p{font-size:13px!important}.panel-title{font-size:14px!important}.panel-sub{font-size:11px!important;line-height:1.45!important}.empty{font-size:12px!important}.badge,.status-badge{font-size:9.5px!important}.secondary-action,.primary-action,.action-button,.modal-submit,.confirm-button,.renew-button,.action{font-size:11.5px!important}
 

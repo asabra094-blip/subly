@@ -107,21 +107,30 @@ async function loadWallet(){
  const c=document.getElementById("walletResellerCode");if(c)c.textContent=currentProfile?.reseller_code||"Not assigned";
 }
 
+function dashboardActivityStatus(kind,status){
+ if(kind==="topup")return({pending:{label:"Pending",tone:"pending"},approved:{label:"Approved",tone:"approved"},rejected:{label:"Rejected",tone:"rejected"}})[status]||{label:status||"Unknown",tone:"neutral"};
+ return({processing:{label:"Pending",tone:"pending"},delivered:{label:"Delivered",tone:"delivered"},refunded:{label:"Refunded",tone:"refunded"},rejected:{label:"Rejected",tone:"rejected"},cancelled:{label:"Cancelled",tone:"rejected"}})[status]||{label:status||"Unknown",tone:"neutral"};
+}
+
 async function loadDashboardSummary(){
  if(!currentUser)return;
- const [ordersCount,activeCount,recent,products]=await Promise.all([
+ const [ordersCount,activeCount,recentOrders,recentTopups,products]=await Promise.all([
   supabaseClient.from("orders").select("id",{count:"exact",head:true}).eq("user_id",currentUser.id),
   supabaseClient.from("orders").select("id",{count:"exact",head:true}).eq("user_id",currentUser.id).eq("status","delivered").gt("expires_at",new Date().toISOString()),
-  supabaseClient.from("orders").select("id,order_number,product_id,status,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(5),
+  supabaseClient.from("orders").select("id,order_number,product_id,status,price_paid,created_at,activated_at").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(8),
+  supabaseClient.from("topup_requests").select("id,amount,payment_method,status,created_at,reviewed_at").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(8),
   supabaseClient.from("products").select("id,app_name,account_type,duration,logo_url")
  ]);
  const orderEl=document.getElementById("orderCount");if(orderEl)orderEl.textContent=ordersCount.count??0;
  const activeEl=document.getElementById("activeCount");if(activeEl)activeEl.textContent=activeCount.count??0;
- const container=document.getElementById("recentOrders");if(!container)return;
- if(recent.error){container.innerHTML='<div class="empty">Could not load recent orders.</div>';return;}
- const rows=recent.data||[],plist=products.data||[];
- if(!rows.length){container.innerHTML='<div class="empty"><div class="empty-icon">🛒</div>No orders yet.</div>';return;}
- container.innerHTML=rows.map(order=>{const p=plist.find(x=>x.id===order.product_id)||{};return `<div class="order-card"><div class="order-top"><div><div class="order-name">${escapeHtml(p.app_name||"Subscription")}</div><div class="order-sub">${escapeHtml(p.account_type||"Standard")} • ${escapeHtml(p.duration||"—")} • ${escapeHtml(formatDateTime(order.created_at))}</div></div><span class="badge ${escapeHtml(order.status||"")}">${escapeHtml(order.status||"unknown")}</span></div></div>`;}).join("");
+ const container=document.getElementById("recentActivity");if(!container)return;
+ if(recentOrders.error||recentTopups.error){console.error("[SUBLY] Dashboard activity error",recentOrders.error||recentTopups.error);container.innerHTML='<div class="empty">Could not load recent activity.</div>';return;}
+ const plist=products.data||[];
+ const orderActivities=(recentOrders.data||[]).map(order=>{const p=plist.find(x=>x.id===order.product_id)||{},state=dashboardActivityStatus("order",order.status);return{time:order.status==="delivered"&&order.activated_at?order.activated_at:order.created_at,icon:p.logo_url?`<img src="${escapeHtml(p.logo_url)}" alt="${escapeHtml(p.app_name||"Subscription")}">`:'📺',title:`${escapeHtml(p.app_name||"Subscription")} ${state.label.toLowerCase()}`,detail:`${escapeHtml(p.account_type||"Standard")} • ${escapeHtml(p.duration||"—")} • ${money(order.price_paid)}`,status:state};});
+ const topupActivities=(recentTopups.data||[]).map(item=>{const state=dashboardActivityStatus("topup",item.status);return{time:item.status!=="pending"&&item.reviewed_at?item.reviewed_at:item.created_at,icon:'💳',title:`Top-up ${state.label.toLowerCase()}`,detail:`${money(item.amount)} • ${escapeHtml(paymentMethodLabel(item.payment_method))}`,status:state};});
+ const activities=[...orderActivities,...topupActivities].sort((a,b)=>new Date(b.time||0)-new Date(a.time||0)).slice(0,8);
+ if(!activities.length){container.innerHTML='<div class="empty"><div class="empty-icon">⚡</div>No activity yet.</div>';return;}
+ container.innerHTML=activities.map(item=>`<div class="activity-item"><div class="activity-icon">${item.icon}</div><div class="activity-main"><div class="activity-title">${item.title}</div><div class="activity-detail">${item.detail}</div></div><div class="activity-side"><span class="activity-badge ${escapeHtml(item.status.tone)}">${escapeHtml(item.status.label)}</span><time>${escapeHtml(formatDateTime(item.time))}</time></div></div>`).join("");
 }
 
 function openTopupModal(){

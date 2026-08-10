@@ -41,17 +41,45 @@ function escapeHtml(value){return String(value??"").replaceAll("&","&amp;").repl
 function paymentMethodLabel(value){if(value==="whish_money")return"Whish Money";if(value==="cash")return"Cash";if(value==="crypto")return"Crypto";return value||"Unknown";}
 function transactionLabel(type){return({topup:"Top-up",purchase:"Purchase",renewal:"Renewal",refund:"Refund",adjustment:"Adjustment",manual_adjustment:"Adjustment"})[type]||type||"Transaction";}
 function getPaymentCode(){return currentProfile?.reseller_code||"";}
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+
+async function fetchResellerProfile(userId){
+ let lastError=null;
+ for(let attempt=0;attempt<2;attempt++){
+  const{data,error}=await supabaseClient.from("profiles").select("id,username,business_name,reseller_code,role,status,tier").eq("id",userId).maybeSingle();
+  if(!error)return{profile:data,error:null};
+  lastError=error;
+  if(attempt===0)await sleep(350);
+ }
+ return{profile:null,error:lastError};
+}
+
+function showResellerAuthRetry(message="Could not verify your session. Check your connection and retry."){
+ const loadingText=document.getElementById("loadingText");
+ if(loadingText)loadingText.innerHTML=`${escapeHtml(message)}<br><button type="button" onclick="checkReseller()" style="margin-top:12px;padding:10px 14px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:#17151f;color:#fff;font-weight:800;cursor:pointer">Retry</button>`;
+}
 
 async function checkReseller(){
  const loadingText=document.getElementById("loadingText");
+ if(loadingText)loadingText.textContent="Checking reseller access...";
  try{
-  const{data:{user},error:userError}=await supabaseClient.auth.getUser();
-  if(userError||!user){location.replace("../login.html");return;}
-  currentUser=user;
-  const{data:profile,error:profileError}=await supabaseClient.from("profiles").select("id,username,business_name,reseller_code,role,status,tier").eq("id",user.id).single();
-  if(profileError||!profile||profile.role!=="reseller"||profile.status!=="active"){
-   await supabaseClient.auth.signOut();location.replace("../login.html");return;
+  const{data:sessionData,error:sessionError}=await supabaseClient.auth.getSession();
+  if(sessionError){console.error("[SUBLY] Reseller session read:",sessionError);showResellerAuthRetry();return;}
+  const session=sessionData?.session;
+  if(!session?.user){location.replace("../login.html");return;}
+
+  const user=session.user;
+  const{profile,error:profileError}=await fetchResellerProfile(user.id);
+  if(profileError){console.error("[SUBLY] Reseller profile verification:",profileError);showResellerAuthRetry("Temporary connection problem. You are still signed in.");return;}
+  if(!profile){console.warn("[SUBLY] Reseller profile missing for authenticated user",user.id);showResellerAuthRetry("Your account profile could not be found. Contact support if this continues.");return;}
+
+  if(profile.role!=="reseller"||profile.status!=="active"){
+   await supabaseClient.auth.signOut();
+   location.replace("../login.html");
+   return;
   }
+
+  currentUser=user;
   currentProfile=profile;
   document.getElementById("resellerName")?.replaceChildren(document.createTextNode(profile.username||"Reseller"));
   const sidebarTier=document.getElementById("sidebarTier");if(sidebarTier)sidebarTier.textContent=(profile.tier||"bronze").toUpperCase();
@@ -61,7 +89,7 @@ async function checkReseller(){
   const loading=document.getElementById("loadingScreen");if(loading)loading.style.display="none";
   const app=document.getElementById("app");if(app)app.style.display="block";
   await initializeCurrentPage();
- }catch(error){console.error("[SUBLY] Reseller init crashed:",error);if(loadingText)loadingText.textContent="Something went wrong.";}
+ }catch(error){console.error("[SUBLY] Reseller init crashed:",error);showResellerAuthRetry("Temporary error while loading the reseller portal. You are still signed in.");}
 }
 
 async function initializeCurrentPage(){

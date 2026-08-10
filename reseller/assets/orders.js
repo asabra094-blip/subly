@@ -1,6 +1,6 @@
 /* Subly reseller orders - single source of truth */
 const RESELLER_ORDER_PAGE_SIZE=25;
-let resellerOrderFilter='all';
+let resellerOrderFilter='processing';
 let resellerOrderPage=1;
 let resellerOrderTotal=0;
 let resellerOrders=[];

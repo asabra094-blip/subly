@@ -5,6 +5,8 @@
 
 /* Prevent double-tap zoom on interactive portal UI while keeping normal page pinch zoom available. */
 html,body,a,button,input,select,textarea,label,[role="button"]{touch-action:manipulation}
+/* iOS Safari auto-zooms focused form controls below 16px. Keep controls at 16px on touch/mobile only. */
+@media (hover:none) and (pointer:coarse){input,select,textarea{font-size:16px!important}}
 
 /* Shared shell */
 .nav-btn{font-size:13px!important}.brand-sub{font-size:10px!important}.page-title{font-size:18px!important}.online,.status{font-size:11px!important}.logout{font-size:12px!important}.account-name,.admin-name{font-size:13px!important}.account-tier,.admin-role{font-size:10.5px!important}.welcome p{font-size:13px!important}.panel-title{font-size:14px!important}.panel-sub{font-size:11px!important;line-height:1.45!important}.empty{font-size:12px!important}.badge,.status-badge{font-size:9.5px!important}.secondary-action,.primary-action,.action-button,.modal-submit,.confirm-button,.renew-button,.action{font-size:11.5px!important}
@@ -20,6 +22,7 @@ html,body,a,button,input,select,textarea,label,[role="button"]{touch-action:mani
 
 /* Forms and modals */
 label,.field-label,.form-label{font-size:11.5px!important}input,select,textarea{font-size:13px!important}.modal-head p{font-size:11px!important}.confirm-label{font-size:11px!important}.confirm-value{font-size:12px!important}.modal-message,.form-message,.topup-message,.manage-message,.support-message,.order-modal-message{font-size:11px!important}
+@media (hover:none) and (pointer:coarse){input,select,textarea,.customer-search input,.sub-search input,.support-search,.product-search,.product-filter,.transaction-search,.transaction-select{font-size:16px!important}}
 
 /* Orders / filters / tabs */
 .order-status-tabs button,.order-tab,.topup-tab,.support-tab,.transaction-tab{font-size:11px!important}.requested-profile-note,.order-summary-box{font-size:11px!important}.order-modal-grid .form-label{font-size:11px!important}
@@ -35,4 +38,5 @@ label,.field-label,.form-label{font-size:11.5px!important}input,select,textarea{
 
 @media(max-width:600px){
   .nav-btn{font-size:13px!important}.page-title{font-size:17px!important}.panel-title{font-size:13.5px!important}.panel-sub{font-size:11px!important}.order-name{font-size:14px!important}.order-sub,.order-reseller{font-size:11px!important}.info-value{font-size:11px!important}.finance-title{font-size:12.5px!important}.finance-sub{font-size:10.5px!important}.subscription-customer{font-size:12.5px!important}.sub-detail-value strong,.sub-detail-value a,.sub-credentials strong,.subscription-date strong{font-size:10.5px!important}.sub-card-tools button,.sub-card-tools a,.subscription-actions button{font-size:10px!important}.customer-name{font-size:14px!important}.customer-meta-value{font-size:11px!important}.customer-action{font-size:10.5px!important}.choice-title{font-size:11.5px!important}.choice-sub{font-size:10px!important}.transaction-table{font-size:10.5px!important}
+  input,select,textarea,.customer-search input,.sub-search input,.support-search,.product-search,.product-filter,.transaction-search,.transaction-select{font-size:16px!important}
 }

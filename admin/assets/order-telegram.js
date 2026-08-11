@@ -1,32 +1,36 @@
-/* Subly admin order Telegram bridge — keeps notification delivery separate from order business logic. */
+/* Subly admin order Telegram bridge — notification only; order logic remains in orders.js. */
 (()=>{
   if(window.__sublyOrderTelegramBridge)return;
   window.__sublyOrderTelegramBridge=true;
 
-  const original=window.submitDeliverOrder;
-  if(typeof original!=='function')return;
+  let bridgeOrderId=null;
+  const originalOpen=window.openDeliverOrder;
+  const originalSubmit=window.submitDeliverOrder;
+  const originalClose=window.closeDeliverOrder;
+  if(typeof originalSubmit!=='function')return;
+
+  if(typeof originalOpen==='function')window.openDeliverOrder=function(id){
+    bridgeOrderId=id||null;
+    return originalOpen.apply(this,arguments);
+  };
+  if(typeof originalClose==='function')window.closeDeliverOrder=function(){
+    bridgeOrderId=null;
+    return originalClose.apply(this,arguments);
+  };
 
   window.submitDeliverOrder=async function(){
-    const orderId=window.selectedAdminOrderId;
-    if(!orderId)return original.apply(this,arguments);
-
-    await original.apply(this,arguments);
+    const orderId=bridgeOrderId;
+    await originalSubmit.apply(this,arguments);
+    if(!orderId)return;
 
     try{
-      const {data:order,error}=await window.supabaseClient
-        .from('orders')
-        .select('id,status')
-        .eq('id',orderId)
-        .maybeSingle();
+      const {data:order,error}=await supabaseClient.from('orders').select('id,status').eq('id',orderId).maybeSingle();
       if(error||order?.status!=='delivered')return;
-
-      const {data,error:notifyError}=await window.supabaseClient.functions.invoke('send-reseller-notification',{
+      const {data,error:notifyError}=await supabaseClient.functions.invoke('send-reseller-notification',{
         body:{event:'order_delivered',order_id:orderId}
       });
       if(notifyError)console.error('Delivered Telegram notification failed:',notifyError);
       else if(data?.ok===false)console.error('Delivered Telegram notification failed:',data.error||data);
-    }catch(error){
-      console.error('Delivered Telegram notification error:',error);
-    }
+    }catch(error){console.error('Delivered Telegram notification error:',error);}
   };
 })();

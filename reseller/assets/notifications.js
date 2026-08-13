@@ -28,3 +28,6 @@
  window.addEventListener('pagehide',stopLiveUpdates,{once:true});
  wait();
 })();
+
+/* Load the clean reseller language mode once on every reseller page. */
+(()=>{if(document.querySelector('script[data-subly-i18n]'))return;const s=document.createElement('script');s.src='assets/i18n.js?v=clean-1';s.defer=true;s.dataset.sublyI18n='1';document.head.appendChild(s)})();

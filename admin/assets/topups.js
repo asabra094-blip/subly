@@ -6,7 +6,7 @@ let adminTopupTotal=0;
 let adminTopups=[];
 let adminTopupProfiles=[];
 
-function setTopupFilter(filter){adminTopupFilter=filter;adminTopupPage=1;document.querySelectorAll('[data-topup-filter]').forEach(b=>b.classList.toggle('active',b.dataset.topupFilter===filter));loadTopups();}
+function setTopupFilter(filter){if(!['pending','approved','rejected','all'].includes(filter))return;adminTopupFilter=filter;adminTopupPage=1;document.querySelectorAll('[data-topup-filter]').forEach(b=>b.classList.toggle('active',b.dataset.topupFilter===filter));loadTopups();}
 function adminTopupPager(){const pages=Math.max(1,Math.ceil(adminTopupTotal/ADMIN_TOPUP_PAGE_SIZE)),first=adminTopupTotal?((adminTopupPage-1)*ADMIN_TOPUP_PAGE_SIZE)+1:0,last=Math.min(adminTopupPage*ADMIN_TOPUP_PAGE_SIZE,adminTopupTotal);return `<div class="list-pager"><button class="action" ${adminTopupPage<=1?'disabled':''} onclick="changeAdminTopupPage(-1)">← Previous</button><span>${first}–${last} of ${adminTopupTotal} • Page ${adminTopupPage}/${pages}</span><button class="action" ${adminTopupPage>=pages?'disabled':''} onclick="changeAdminTopupPage(1)">Next →</button></div>`;}
 function changeAdminTopupPage(delta){const pages=Math.max(1,Math.ceil(adminTopupTotal/ADMIN_TOPUP_PAGE_SIZE)),next=adminTopupPage+delta;if(next<1||next>pages)return;adminTopupPage=next;loadTopups();}
 
@@ -20,7 +20,8 @@ async function loadTopups(){
  if(error){console.error('[SUBLY] top-ups',error);container.innerHTML=`<div class="empty">${escapeHtml(error.message||'Could not load top-up requests.')}</div>`;return;}
  adminTopupTotal=count||0;adminTopups=data||[];
  const uids=[...new Set(adminTopups.map(x=>x.user_id).filter(Boolean))];
- const profiles=uids.length?await supabaseClient.from('profiles').select('id,username,business_name,reseller_code').in('id',uids):{data:[]};
+ const profiles=uids.length?await supabaseClient.from('profiles').select('id,username,business_name,reseller_code').in('id',uids):{data:[],error:null};
+ if(profiles.error){console.error('[SUBLY] top-up reseller lookup',profiles.error);container.innerHTML=`<div class="empty">${escapeHtml(profiles.error.message||'Could not load reseller details.')}</div>`;return;}
  adminTopupProfiles=profiles.data||[];renderTopups();
 }
 function renderTopups(){

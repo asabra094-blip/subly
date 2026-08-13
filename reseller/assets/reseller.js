@@ -121,10 +121,15 @@ async function loadDashboardSummary(){
   supabaseClient.from("topup_requests").select("id,amount,payment_method,status,created_at,reviewed_at").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(8),
   supabaseClient.from("products").select("id,app_name,account_type,duration,logo_url")
  ]);
- const orderEl=document.getElementById("orderCount");if(orderEl)orderEl.textContent=ordersCount.count??0;
- const activeEl=document.getElementById("activeCount");if(activeEl)activeEl.textContent=activeCount.count??0;
+ const orderEl=document.getElementById("orderCount");if(orderEl)orderEl.textContent=ordersCount.error?'—':String(ordersCount.count??0);
+ const activeEl=document.getElementById("activeCount");if(activeEl)activeEl.textContent=activeCount.error?'—':String(activeCount.count??0);
  const container=document.getElementById("recentActivity");if(!container)return;
- if(recentOrders.error||recentTopups.error){console.error("[SUBLY] Dashboard activity error",recentOrders.error||recentTopups.error);container.innerHTML='<div class="empty">Could not load recent activity.</div>';return;}
+ if(ordersCount.error||activeCount.error||recentOrders.error||recentTopups.error||products.error){
+  const error=ordersCount.error||activeCount.error||recentOrders.error||recentTopups.error||products.error;
+  console.error("[SUBLY] Dashboard query error",error);
+  container.innerHTML='<div class="empty">Could not load recent activity.</div>';
+  return;
+ }
  const plist=products.data||[];
  const orderActivities=(recentOrders.data||[]).map(order=>{const p=plist.find(x=>x.id===order.product_id)||{},state=dashboardActivityStatus("order",order.status);return{time:order.status==="delivered"&&order.activated_at?order.activated_at:order.created_at,icon:p.logo_url?`<img src="${escapeHtml(p.logo_url)}" alt="${escapeHtml(p.app_name||"Subscription")}">`:'📺',title:`${escapeHtml(p.app_name||"Subscription")} ${state.label.toLowerCase()}`,detail:`${escapeHtml(p.account_type||"Standard")} • ${escapeHtml(p.duration||"—")} • ${money(order.price_paid)}`,status:state};});
  const topupActivities=(recentTopups.data||[]).map(item=>{const state=dashboardActivityStatus("topup",item.status);return{time:item.status!=="pending"&&item.reviewed_at?item.reviewed_at:item.created_at,icon:'💳',title:`Top-up ${state.label.toLowerCase()}`,detail:`${money(item.amount)} • ${escapeHtml(paymentMethodLabel(item.payment_method))}`,status:state};});

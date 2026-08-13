@@ -1,12 +1,7 @@
 (()=>{
   const BOT_USERNAME='SublyNotificationsbot';
-  const CODE_TTL_MS=10*60*1000;
 
   function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
-  function randomCode(){
-    const bytes=new Uint8Array(18);crypto.getRandomValues(bytes);
-    return 's_'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
-  }
   function toast(msg){
     let el=document.getElementById('telegramToast');
     if(!el){el=document.createElement('div');el.id='telegramToast';el.className='telegram-toast';document.body.appendChild(el)}
@@ -45,9 +40,10 @@
     const btn=document.getElementById('telegramConnectBtn');if(!btn)return;btn.disabled=true;btn.textContent='Creating link…';
     try{
       const uid=(window.currentUser||currentUser)?.id;if(!uid)throw new Error('Reseller session is not ready.');
-      const code=randomCode(),expires=new Date(Date.now()+CODE_TTL_MS).toISOString();
-      const {error}=await supabaseClient.from('reseller_telegram_connections').upsert({reseller_id:uid,connect_code:code,connect_code_expires_at:expires,updated_at:new Date().toISOString()},{onConflict:'reseller_id'});
+      const {data,error}=await supabaseClient.rpc('create_reseller_telegram_connect_code');
       if(error)throw error;
+      const row=Array.isArray(data)?data[0]:data,code=row?.connect_code;
+      if(!code)throw new Error('Could not create Telegram connection code.');
       const url=`https://t.me/${BOT_USERNAME}?start=${encodeURIComponent(code)}`;
       window.open(url,'_blank','noopener,noreferrer');
       btn.textContent='Telegram opened';toast('Press START in Telegram to finish connecting.');
@@ -58,8 +54,7 @@
     const btn=document.getElementById('telegramDisconnectBtn');if(!btn)return;if(!confirm('Disconnect Telegram notifications from this reseller account?'))return;
     btn.disabled=true;btn.textContent='Disconnecting…';
     try{
-      const uid=(window.currentUser||currentUser)?.id;
-      const {error}=await supabaseClient.from('reseller_telegram_connections').delete().eq('reseller_id',uid);if(error)throw error;
+      const {error}=await supabaseClient.rpc('disconnect_reseller_telegram');if(error)throw error;
       toast('Telegram disconnected.');await refreshTelegramConnection();
     }catch(e){console.error('[SUBLY] Telegram disconnect:',e);toast(e.message||'Could not disconnect Telegram.');}finally{btn.disabled=false;btn.textContent='Disconnect';}
   }

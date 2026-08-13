@@ -36,6 +36,14 @@ label,.field-label,.form-label{font-size:11.5px!important}input,select,textarea{
 /* Admin products / support / transaction center */
 .product-admin-head p,.product-form-note,.product-editor-message{font-size:11px!important;line-height:1.45!important}.product-summary-card span,.support-summary span,.transaction-summary-card span{font-size:10px!important}.product-summary-card strong,.support-summary strong,.transaction-summary-card strong{font-size:17px!important}.product-form-grid label,.tier-editor-grid label,.service-edit-fields label{font-size:11px!important}.product-check{font-size:11.5px!important}.support-search,.product-search,.product-filter,.transaction-search,.transaction-select{font-size:12px!important}.support-modal-summary{font-size:11px!important}.transaction-head p{font-size:11.5px!important}.transaction-table{font-size:11px!important}.transaction-table th{font-size:9.5px!important}.transaction-mobile-list{font-size:11px!important}.transaction-page-info,.transaction-pagination{font-size:11px!important}.transaction-pagination button{font-size:11px!important}
 
+@media(max-width:760px){
+  /* Reseller drawer close control: keep it in its own corner, never on top of the logo. */
+  #resellerSidebar .brand{padding-top:50px!important;text-align:center!important}
+  #resellerSidebar .brand>.menu-toggle{top:4px!important;right:4px!important;left:auto!important;z-index:5!important;width:40px!important;height:40px!important;display:flex!important;align-items:center!important;justify-content:center!important}
+  #resellerSidebar .brand-logo{margin:0 auto!important}
+  html[dir="rtl"] #resellerSidebar .brand>.menu-toggle{right:4px!important;left:auto!important}
+}
+
 @media(max-width:600px){
   .nav-btn{font-size:13px!important}.page-title{font-size:17px!important}.panel-title{font-size:13.5px!important}.panel-sub{font-size:11px!important}.order-name{font-size:14px!important}.order-sub,.order-reseller{font-size:11px!important}.info-value{font-size:11px!important}.finance-title{font-size:12.5px!important}.finance-sub{font-size:10.5px!important}.subscription-customer{font-size:12.5px!important}.sub-detail-value strong,.sub-detail-value a,.sub-credentials strong,.subscription-date strong{font-size:10.5px!important}.sub-card-tools button,.sub-card-tools a,.subscription-actions button{font-size:10px!important}.customer-name{font-size:14px!important}.customer-meta-value{font-size:11px!important}.customer-action{font-size:10.5px!important}.choice-title{font-size:11.5px!important}.choice-sub{font-size:10px!important}.transaction-table{font-size:10.5px!important}
   input,select,textarea,.customer-search input,.sub-search input,.support-search,.product-search,.product-filter,.transaction-search,.transaction-select{font-size:16px!important}

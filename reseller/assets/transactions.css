@@ -1,9 +1,66 @@
 /* Subly reseller transactions — premium compact cards */
-#transactions .panel-head{gap:10px}.tx-detail-card{position:relative;overflow:hidden;background:linear-gradient(145deg,#17131d,#110f16);border-color:var(--border);box-shadow:0 8px 24px rgba(0,0,0,.09);animation:txIn .26s var(--ease) both;transition:transform .18s var(--ease),border-color .18s,background .18s}.tx-detail-card:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:2px;border-radius:0 2px 2px 0;background:linear-gradient(var(--purple),var(--pink));opacity:.48}.tx-detail-card:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.13);background:linear-gradient(145deg,#191520,#121018)}.tx-detail-card .finance-title{font-size:11.5px}.tx-detail-card .finance-sub{font-size:8.5px;line-height:1.45}.tx-detail-card .finance-label{font-size:7px;text-transform:uppercase;letter-spacing:.045em}.tx-detail-card .finance-value{font-size:9.5px}.tx-detail-card .tx-amount{font-size:12px}.tx-detail-card{grid-template-columns:minmax(0,1.5fr) minmax(72px,.55fr) minmax(82px,.65fr) minmax(104px,.75fr);gap:8px;padding:10px 11px;border-radius:10px}.tx-detail-card>div:not(.finance-main){min-width:0}.tx-detail-card .finance-date{font-size:9px}.secondary-action{transition:transform .16s var(--ease),filter .16s ease}.secondary-action:hover{transform:translateY(-1px);filter:brightness(1.08)}
+#transactions .panel-head{gap:10px}.tx-detail-card{position:relative;overflow:hidden;background:linear-gradient(145deg,#17131d,#110f16);border-color:var(--border);box-shadow:0 8px 24px rgba(0,0,0,.09);animation:txIn .26s var(--ease) both;transition:transform .18s var(--ease),border-color .18s,background .18s,box-shadow .18s}.tx-detail-card:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:2px;border-radius:0 2px 2px 0;background:linear-gradient(var(--purple),var(--pink));opacity:.48}.tx-detail-card:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.13);background:linear-gradient(145deg,#191520,#121018)}.tx-detail-card .finance-title{font-size:11.5px}.tx-detail-card .finance-sub{font-size:8.5px;line-height:1.45}.tx-detail-card .finance-label{font-size:7px;text-transform:uppercase;letter-spacing:.045em}.tx-detail-card .finance-value{font-size:9.5px}.tx-detail-card .tx-amount{font-size:12px}.tx-detail-card{grid-template-columns:minmax(0,1.5fr) minmax(72px,.55fr) minmax(82px,.65fr) minmax(104px,.75fr);gap:8px;padding:10px 11px;border-radius:10px}.tx-detail-card>div:not(.finance-main){min-width:0}.tx-detail-card .finance-date{font-size:9px}.secondary-action{transition:transform .16s var(--ease),filter .16s ease}.secondary-action:hover{transform:translateY(-1px);filter:brightness(1.08)}
 /* Transaction pager owns its button styling. Do not depend on generic .action rules. */
 #transactions .list-pager .action{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;min-width:92px;min-height:36px;padding:8px 13px;border:1px solid rgba(155,92,255,.25);border-radius:10px;background:linear-gradient(145deg,rgba(155,92,255,.12),rgba(239,76,167,.055));color:#e7ddf7;font-size:10px;font-weight:800;line-height:1;cursor:pointer;box-shadow:0 7px 18px rgba(0,0,0,.12);transition:transform .16s var(--ease),border-color .16s,background .16s,opacity .16s;white-space:nowrap}
 #transactions .list-pager .action:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(179,122,255,.48);background:linear-gradient(145deg,rgba(155,92,255,.2),rgba(239,76,167,.09))}
 #transactions .list-pager .action:active:not(:disabled){transform:translateY(0) scale(.98)}
 #transactions .list-pager .action:focus-visible{outline:2px solid rgba(179,122,255,.7);outline-offset:2px}
 #transactions .list-pager .action:disabled{opacity:.32;cursor:not-allowed;transform:none;box-shadow:none;background:rgba(255,255,255,.025);border-color:var(--border);color:var(--muted)}
+
+/* Light mode — transactions need their own high-contrast surface instead of inheriting dark V3 cards. */
+:root[data-theme="light"] #transactions .panel,
+html[data-theme="light"] #transactions .panel,
+body[data-theme="light"] #transactions .panel{background:linear-gradient(145deg,#fff,#faf8fd)!important;border-color:rgba(70,49,92,.13)!important;box-shadow:0 14px 38px rgba(59,38,77,.08)!important}
+:root[data-theme="light"] #transactions .panel-head,
+html[data-theme="light"] #transactions .panel-head,
+body[data-theme="light"] #transactions .panel-head{background:linear-gradient(180deg,rgba(150,91,220,.045),rgba(255,255,255,.7))!important;border-bottom-color:rgba(70,49,92,.1)!important}
+:root[data-theme="light"] #transactions .panel-title,
+html[data-theme="light"] #transactions .panel-title,
+body[data-theme="light"] #transactions .panel-title{color:#21172b!important}
+:root[data-theme="light"] #transactions .panel-sub,
+html[data-theme="light"] #transactions .panel-sub,
+body[data-theme="light"] #transactions .panel-sub{color:#756a7e!important}
+:root[data-theme="light"] #transactions .tx-detail-card,
+html[data-theme="light"] #transactions .tx-detail-card,
+body[data-theme="light"] #transactions .tx-detail-card{background:linear-gradient(145deg,#fff,#fbf9fd)!important;border:1px solid rgba(70,49,92,.12)!important;box-shadow:0 7px 20px rgba(55,35,72,.055)!important;color:#261d2d!important}
+:root[data-theme="light"] #transactions .tx-detail-card:hover,
+html[data-theme="light"] #transactions .tx-detail-card:hover,
+body[data-theme="light"] #transactions .tx-detail-card:hover{background:#fff!important;border-color:rgba(155,92,255,.27)!important;box-shadow:0 11px 28px rgba(81,48,111,.09)!important}
+:root[data-theme="light"] #transactions .finance-title,
+html[data-theme="light"] #transactions .finance-title,
+body[data-theme="light"] #transactions .finance-title{color:#21172b!important}
+:root[data-theme="light"] #transactions .finance-sub,
+html[data-theme="light"] #transactions .finance-sub,
+body[data-theme="light"] #transactions .finance-sub{color:#716777!important}
+:root[data-theme="light"] #transactions .finance-sub strong,
+html[data-theme="light"] #transactions .finance-sub strong,
+body[data-theme="light"] #transactions .finance-sub strong{color:#4a3b53!important}
+:root[data-theme="light"] #transactions .finance-label,
+html[data-theme="light"] #transactions .finance-label,
+body[data-theme="light"] #transactions .finance-label{color:#887b91!important;font-weight:800!important}
+:root[data-theme="light"] #transactions .finance-value,
+html[data-theme="light"] #transactions .finance-value,
+body[data-theme="light"] #transactions .finance-value{color:#33273a!important;font-weight:720!important}
+:root[data-theme="light"] #transactions .tx-amount.credit,
+html[data-theme="light"] #transactions .tx-amount.credit,
+body[data-theme="light"] #transactions .tx-amount.credit{color:#12865e!important}
+:root[data-theme="light"] #transactions .tx-amount.debit,
+html[data-theme="light"] #transactions .tx-amount.debit,
+body[data-theme="light"] #transactions .tx-amount.debit{color:#d4425b!important}
+:root[data-theme="light"] #transactions .list-pager span,
+html[data-theme="light"] #transactions .list-pager span,
+body[data-theme="light"] #transactions .list-pager span{color:#756a7e!important}
+:root[data-theme="light"] #transactions .list-pager .action,
+html[data-theme="light"] #transactions .list-pager .action,
+body[data-theme="light"] #transactions .list-pager .action{background:linear-gradient(145deg,#fff,#f6f1fb)!important;border-color:rgba(132,77,183,.2)!important;color:#66428a!important;box-shadow:0 5px 14px rgba(73,43,96,.07)!important}
+:root[data-theme="light"] #transactions .list-pager .action:hover:not(:disabled),
+html[data-theme="light"] #transactions .list-pager .action:hover:not(:disabled),
+body[data-theme="light"] #transactions .list-pager .action:hover:not(:disabled){background:linear-gradient(145deg,#faf6ff,#f4eafb)!important;border-color:rgba(155,92,255,.4)!important;color:#553174!important}
+:root[data-theme="light"] #transactions .list-pager .action:disabled,
+html[data-theme="light"] #transactions .list-pager .action:disabled,
+body[data-theme="light"] #transactions .list-pager .action:disabled{background:#f3f0f5!important;border-color:rgba(70,49,92,.1)!important;color:#aaa2ae!important;opacity:.65!important}
+:root[data-theme="light"] #transactions .secondary-action,
+html[data-theme="light"] #transactions .secondary-action,
+body[data-theme="light"] #transactions .secondary-action{background:linear-gradient(145deg,#fff,#f5eefb)!important;border-color:rgba(132,77,183,.2)!important;color:#68418d!important;box-shadow:0 5px 15px rgba(73,43,96,.065)!important}
+
 @keyframes txIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}@media(max-width:760px){#transactions .panel-head{align-items:flex-start}.tx-detail-card{grid-template-columns:1fr 1fr;padding:9px;gap:6px}.tx-detail-card .finance-main{grid-column:1/-1}.tx-detail-card .finance-date{grid-column:auto}.tx-detail-card .finance-title{font-size:11px}.tx-detail-card .finance-sub{font-size:8px}.tx-detail-card .tx-amount{font-size:11px}.tx-detail-card .finance-value{font-size:9px}}@media(max-width:520px){#transactions .panel-head{padding:13px;display:grid;grid-template-columns:1fr auto}#transactions .panel-head .secondary-action{min-height:34px;padding:7px 9px;font-size:9px;width:auto}.finance-list{gap:7px}.tx-detail-card{border-radius:9px}.tx-detail-card .finance-label{font-size:6.5px}.tx-detail-card .finance-sub strong{font-weight:800}.tx-detail-card .finance-main{padding-right:2px}#transactions .list-pager .action{min-width:82px;min-height:34px;padding:7px 10px;font-size:9px}}@media(max-width:360px){.tx-detail-card{grid-template-columns:1fr}.tx-detail-card .finance-main{grid-column:auto}}@media(prefers-reduced-motion:reduce){.tx-detail-card,.secondary-action,#transactions .list-pager .action{animation:none!important;transition:none!important}}

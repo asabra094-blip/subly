@@ -28,3 +28,6 @@
  window.addEventListener('pagehide',stopLiveUpdates,{once:true});
  wait();
 })();
+
+/* Preview-only reseller appearance controls. */
+(()=>{if(document.querySelector('script[data-subly-theme]'))return;const s=document.createElement('script');s.src='assets/theme.js?v=1';s.dataset.sublyTheme='1';document.head.appendChild(s)})();

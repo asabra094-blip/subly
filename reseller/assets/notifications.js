@@ -29,5 +29,14 @@
  wait();
 })();
 
+/* Make wallet copy feedback appear on the button that was actually clicked. */
+window.copyPaymentCode=async function(){
+ const code=typeof getPaymentCode==='function'?getPaymentCode():'';
+ if(!code)return;
+ const button=window.event?.currentTarget instanceof HTMLElement?window.event.currentTarget:null;
+ try{await navigator.clipboard.writeText(code)}catch{const t=document.createElement('textarea');t.value=code;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}
+ if(button){const old=button.textContent;button.textContent='✓ Copied';button.classList.add('copied');setTimeout(()=>{button.textContent=old;button.classList.remove('copied')},1400)}
+};
+
 /* Preview-only reseller appearance controls. */
 (()=>{if(document.querySelector('script[data-subly-theme]'))return;const s=document.createElement('script');s.src='assets/theme.js?v=1';s.dataset.sublyTheme='1';document.head.appendChild(s)})();

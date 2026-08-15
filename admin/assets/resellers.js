@@ -51,17 +51,25 @@ async function loadResellers(){
   c.innerHTML=rows.map(r=>{
     const wallet=wallets.find(w=>w.user_id===r.id),bal=wallet?.balance??0,status=String(r.status||'unknown'),label=escapeHtml(r.business_name||r.username||'Unnamed reseller'),username=escapeHtml(r.username||'');
     const lifecycle=status==='archived'
-      ?`<button class="action reseller-restore-action" onclick="restoreReseller('${r.id}','${label.replaceAll("'","&#039;")}')">Restore</button><button class="action reseller-delete-action" onclick="deleteReseller('${r.id}','${label.replaceAll("'","&#039;")}','${username.replaceAll("'","&#039;")}')">Delete</button>`
-      :`<button class="action reseller-archive-action" onclick="archiveReseller('${r.id}','${label.replaceAll("'","&#039;")}')">Archive</button>`;
+      ?`<button class="action reseller-restore-action" onclick="restoreReseller('${r.id}')">Restore</button><button class="action reseller-delete-action" onclick="deleteReseller('${r.id}')">Delete</button>`
+      :`<button class="action reseller-archive-action" onclick="archiveReseller('${r.id}')">Archive</button>`;
     return `<div class="reseller-row"><div><div class="reseller-name">${label}</div><div class="reseller-sub">${username} ${r.reseller_code?`• ${escapeHtml(r.reseller_code)}`:''}</div></div><div><span class="badge ${escapeHtml(status)}">${escapeHtml(status)}</span></div><div><div class="reseller-name">${escapeHtml((r.tier||'bronze').toUpperCase())}</div><div class="reseller-sub">Wallet ${money(bal)}</div></div><div class="reseller-row-actions"><button class="action" onclick="openResellerManage('${r.id}')">Manage</button>${lifecycle}</div></div>`;
   }).join('')+resellerPager();
 }
 
-async function setResellerArchived(id,archived,name){
+async function getResellerLifecycleProfile(id){
+  const{data,error}=await supabaseClient.from('profiles').select('id,username,business_name,status').eq('id',id).eq('role','reseller').maybeSingle();
+  if(error)throw error;
+  if(!data)throw new Error('Reseller not found');
+  return data;
+}
+async function setResellerArchived(id,archived){
   if(!id)return;
-  const action=archived?'archive':'restore';
+  let p;
+  try{p=await getResellerLifecycleProfile(id)}catch(e){alert(e.message||'Could not load reseller.');return}
+  const name=p.business_name||p.username||'this reseller',action=archived?'archive':'restore';
   const message=archived
-    ?`Archive ${name}?\n\nThey will no longer be able to sign in, but all orders, subscriptions, customers, wallet history and transactions will stay محفوظed.`
+    ?`Archive ${name}?\n\nThey will no longer be able to sign in, but all orders, subscriptions, customers, wallet history and transactions will stay saved.`
     :`Restore ${name}?\n\nTheir account will become active again and they can sign in.`;
   if(!confirm(message))return;
   const{error}=await supabaseClient.rpc('admin_set_reseller_archived',{p_user_id:id,p_archived:archived});
@@ -69,8 +77,8 @@ async function setResellerArchived(id,archived,name){
   if(managedResellerId===id&&typeof closeResellerManage==='function')closeResellerManage();
   await loadResellers();
 }
-function archiveReseller(id,name){return setResellerArchived(id,true,name)}
-function restoreReseller(id,name){return setResellerArchived(id,false,name)}
+function archiveReseller(id){return setResellerArchived(id,true)}
+function restoreReseller(id){return setResellerArchived(id,false)}
 
 function resellerHistorySummary(check){
   const parts=[];
@@ -79,10 +87,11 @@ function resellerHistorySummary(check){
   if(Number(check?.wallet_balance||0)!==0)parts.push(`wallet balance ${money(check.wallet_balance)}`);
   return parts.join(', ');
 }
-async function deleteReseller(id,name,username){
+async function deleteReseller(id){
   if(!id)return;
   const{data:check,error:checkError}=await supabaseClient.rpc('admin_reseller_delete_check',{p_user_id:id});
   if(checkError){alert(checkError.message||'Could not check reseller deletion safety.');return}
+  const username=String(check?.username||''),name=username||'this reseller';
   if(check?.status!=='archived'){
     alert('Archive this reseller first. Permanent delete is only available after archiving.');
     return;
@@ -119,8 +128,7 @@ async function enhanceManagedResellerSettings(){
   if(document.getElementById('mrResellerLifecycleZone'))return;
   const content=document.getElementById('mrContent');if(!content)return;
   const zone=document.createElement('div');zone.id='mrResellerLifecycleZone';zone.className='mr-section reseller-lifecycle-zone';
-  const name=escapeHtml(p.business_name||p.username||'Reseller'),user=escapeHtml(p.username||'');
-  zone.innerHTML=`<h3>Account lifecycle</h3><p class="reseller-lifecycle-copy">Archive keeps all reseller history but blocks sign-in. Permanent delete is only allowed for an archived reseller with zero account history.</p><div class="mr-actions">${p.status==='archived'?`<button class="mr-btn reseller-restore-action" onclick="restoreReseller('${p.id}','${name.replaceAll("'","&#039;")}')">Restore Reseller</button><button class="mr-btn reseller-delete-action" onclick="deleteReseller('${p.id}','${name.replaceAll("'","&#039;")}','${user.replaceAll("'","&#039;")}')">Delete Permanently</button>`:`<button class="mr-btn reseller-archive-action" onclick="archiveReseller('${p.id}','${name.replaceAll("'","&#039;")}')">Archive Reseller</button>`}</div>`;
+  zone.innerHTML=`<h3>Account lifecycle</h3><p class="reseller-lifecycle-copy">Archive keeps all reseller history but blocks sign-in. Permanent delete is only allowed for an archived reseller with zero account history.</p><div class="mr-actions">${p.status==='archived'?`<button class="mr-btn reseller-restore-action" onclick="restoreReseller('${p.id}')">Restore Reseller</button><button class="mr-btn reseller-delete-action" onclick="deleteReseller('${p.id}')">Delete Permanently</button>`:`<button class="mr-btn reseller-archive-action" onclick="archiveReseller('${p.id}')">Archive Reseller</button>`}</div>`;
   content.appendChild(zone);
 }
 function installResellerLifecycleHooks(){

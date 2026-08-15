@@ -1,0 +1,224 @@
+/* Subly reseller UI polish v4.1
+   CSS-only visual layer. No auth, data, routing, theme, language, or runtime behavior. */
+
+/* ---------- DARK: shell and main surfaces ---------- */
+html:not([data-theme="light"]) body{
+  background:
+    radial-gradient(circle at 10% -8%,rgba(145,82,255,.14),transparent 31%),
+    radial-gradient(circle at 102% 30%,rgba(239,76,167,.07),transparent 28%),
+    linear-gradient(180deg,#09070e 0%,#07070b 100%)!important;
+}
+html:not([data-theme="light"]) body:before{opacity:.55!important;background-size:48px 48px!important}
+
+.main .topbar{
+  background:rgba(9,7,13,.78)!important;
+  border-bottom-color:rgba(255,255,255,.07)!important;
+  backdrop-filter:blur(22px) saturate(130%)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(130%)!important;
+  box-shadow:0 7px 28px rgba(0,0,0,.05)!important;
+}
+.main .content{padding-top:28px}
+.main .page-title{font-weight:860;letter-spacing:-.025em}
+.main .welcome h1,.main .welcome h2{letter-spacing:-.045em;line-height:1.1}
+
+.main .panel,
+.main .stat,
+.main .wallet-summary-card,
+.main .order-card,
+.main .customer-card,
+.main .subscription-card,
+.main .tx-detail-card,
+.main .finance-item,
+.main .contact-ticket,
+.main .service-card,
+.main .choice-card,
+.main .history-item,
+.main .sub-group,
+.main .expired-section{
+  border-color:rgba(255,255,255,.085)!important;
+  box-shadow:0 10px 30px rgba(0,0,0,.11)!important;
+}
+html:not([data-theme="light"]) .main .panel,
+html:not([data-theme="light"]) .main .stat,
+html:not([data-theme="light"]) .main .wallet-summary-card,
+html:not([data-theme="light"]) .main .order-card,
+html:not([data-theme="light"]) .main .customer-card,
+html:not([data-theme="light"]) .main .subscription-card,
+html:not([data-theme="light"]) .main .tx-detail-card,
+html:not([data-theme="light"]) .main .finance-item,
+html:not([data-theme="light"]) .main .contact-ticket,
+html:not([data-theme="light"]) .main .service-card,
+html:not([data-theme="light"]) .main .choice-card,
+html:not([data-theme="light"]) .main .history-item,
+html:not([data-theme="light"]) .main .sub-group{
+  background:linear-gradient(145deg,rgba(23,18,30,.98),rgba(13,10,18,.985))!important;
+}
+html:not([data-theme="light"]) .main .expired-section{
+  background:linear-gradient(145deg,rgba(255,101,124,.04),rgba(13,10,18,.985))!important;
+}
+.main .panel{border-radius:17px!important;overflow:hidden}
+.main .panel-head{padding:15px 17px!important;background:rgba(255,255,255,.012)!important;border-bottom-color:rgba(255,255,255,.075)!important}
+.main .panel-body{padding:17px!important}
+.main .stat{border-radius:16px!important}
+.main .wallet-summary-card{border-radius:16px!important}
+.main .order-card,.main .customer-card,.main .subscription-card,.main .tx-detail-card,.main .contact-ticket{border-radius:13px!important}
+
+/* ---------- INNER CARDS / FORMS ---------- */
+html:not([data-theme="light"]) .main :is(.info-box,.customer-meta-box,.sub-detail-row,.sub-credentials>div,.subscription-date,.sub-notes,.payment-help,.payment-id-box,.contact-tip,.contact-ticket-message,.reseller-delivery-note,.subscription-context),
+html:not([data-theme="light"]) .modal :is(.payment-help,.payment-id-box){
+  background:rgba(255,255,255,.025)!important;
+  border-color:rgba(255,255,255,.08)!important;
+}
+.main :is(input,select,textarea,.form-input,.form-select,.form-textarea,.tx-filter,.sub-search input){
+  border-radius:10px!important;
+  transition:border-color .17s ease,box-shadow .17s ease,background .17s ease!important;
+}
+html:not([data-theme="light"]) .main :is(input,select,textarea,.form-input,.form-select,.form-textarea,.tx-filter,.sub-search input),
+html:not([data-theme="light"]) .modal :is(input,select,textarea,.form-input,.form-select,.form-textarea){
+  background:rgba(255,255,255,.026)!important;
+  border-color:rgba(255,255,255,.085)!important;
+  color:#f7f4fb!important;
+}
+.main :is(input,select,textarea,.form-input,.form-select,.form-textarea,.tx-filter,.sub-search input):focus,
+.modal :is(input,select,textarea,.form-input,.form-select,.form-textarea):focus{
+  border-color:rgba(164,103,255,.52)!important;
+  box-shadow:0 0 0 3px rgba(155,92,255,.09)!important;
+  outline:none!important;
+}
+
+/* ---------- BUTTON LANGUAGE ---------- */
+.main :is(.primary-action,.add-customer-btn,.purchase-btn,.buy-button,.contact-submit,.modal-submit,.confirm-button),
+.modal :is(.modal-submit,.confirm-button){
+  background:linear-gradient(135deg,#8750f4 0%,#a94fd2 52%,#da4999 100%)!important;
+  color:#fff!important;
+  border-color:rgba(255,255,255,.055)!important;
+  border-radius:10px!important;
+  box-shadow:0 9px 22px rgba(116,66,239,.15)!important;
+}
+.main :is(.secondary-action,.customer-action,.customer-menu-btn,.order-button,.copy-payment-button,.sub-copy-btn,.sub-copy-all,.sub-refresh,.tx-clear,.renewal-choice,.order-status-tabs button,.list-pager button),
+.modal :is(.copy-payment-button,.renewal-choice){
+  border-radius:9px!important;
+  transition:transform .16s cubic-bezier(.22,1,.36,1),background .17s ease,border-color .17s ease,color .17s ease,box-shadow .17s ease!important;
+}
+html:not([data-theme="light"]) .main :is(.secondary-action,.customer-action,.customer-menu-btn,.order-button,.copy-payment-button,.sub-copy-btn,.sub-copy-all,.sub-refresh,.tx-clear,.renewal-choice,.order-status-tabs button,.list-pager button),
+html:not([data-theme="light"]) .modal :is(.copy-payment-button,.renewal-choice){
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02))!important;
+  border-color:rgba(255,255,255,.085)!important;
+}
+@media(hover:hover){
+  .main :is(.panel,.stat,.wallet-summary-card,.order-card,.customer-card,.subscription-card,.tx-detail-card,.finance-item,.contact-ticket){transition:transform .19s cubic-bezier(.22,1,.36,1),border-color .19s ease,box-shadow .19s ease,background .19s ease}
+  .main :is(.stat,.wallet-summary-card,.order-card,.customer-card,.subscription-card,.tx-detail-card,.finance-item,.contact-ticket):hover{transform:translateY(-2px);border-color:rgba(174,122,255,.20)!important;box-shadow:0 15px 34px rgba(0,0,0,.15)!important}
+  .main :is(.primary-action,.add-customer-btn,.purchase-btn,.buy-button,.contact-submit,.secondary-action,.customer-action,.order-button,.copy-payment-button,.sub-copy-btn,.sub-copy-all,.sub-refresh,.tx-clear):hover:not(:disabled){transform:translateY(-1px)}
+}
+.main :is(button,a):focus-visible,.modal :is(button,a):focus-visible{outline:2px solid rgba(183,126,255,.72)!important;outline-offset:2px}
+
+/* ---------- STATUS COLORS ---------- */
+.main :is(.badge.delivered,.badge.approved,.subscription-status:not(.expiring):not(.expired),.contact-ticket-status.resolved,.activity-badge.delivered,.activity-badge.approved){color:#5adbaa!important;background:rgba(73,215,161,.065)!important;border-color:rgba(73,215,161,.21)!important}
+.main :is(.badge.processing,.badge.pending,.subscription-status.expiring,.contact-ticket-status.open,.activity-badge.pending){color:#f2c66f!important;background:rgba(244,199,103,.065)!important;border-color:rgba(244,199,103,.21)!important}
+.main :is(.badge.rejected,.badge.cancelled,.subscription-status.expired,.activity-badge.rejected){color:#ff7d91!important;background:rgba(255,101,124,.065)!important;border-color:rgba(255,101,124,.21)!important}
+.main .badge.refunded{color:#ffb463!important;background:rgba(255,153,55,.075)!important;border-color:rgba(255,153,55,.22)!important}
+
+/* ---------- MODALS / NOTIFICATIONS / TIERS ---------- */
+.modal{background:rgba(4,3,7,.72)!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important}
+html:not([data-theme="light"]) .modal-card{background:linear-gradient(155deg,#18131f,#100d15)!important;border-color:rgba(189,139,255,.20)!important;box-shadow:0 30px 90px rgba(0,0,0,.48)!important}
+.notification-btn{border-radius:11px!important}
+html:not([data-theme="light"]) body .notification-panel,
+html:not([data-theme="light"]) body .notification-head,
+html:not([data-theme="light"]) body .tier-modal-card,
+html:not([data-theme="light"]) body .tier-row{
+  background:linear-gradient(145deg,#17131e,#100d16)!important;
+  border-color:rgba(255,255,255,.085)!important;
+}
+html:not([data-theme="light"]) body .notification-item:hover{background:rgba(255,255,255,.04)!important}
+html:not([data-theme="light"]) body .notification-item.unread{background:rgba(155,92,255,.10)!important}
+
+/* ---------- LIGHT MODE: deliberately soft neutral, not harsh white ---------- */
+html[data-theme="light"] body{
+  background:
+    radial-gradient(circle at 8% -8%,rgba(132,80,214,.085),transparent 31%),
+    radial-gradient(circle at 100% 28%,rgba(207,74,145,.045),transparent 27%),
+    linear-gradient(180deg,#f8f6fa 0%,#f1edf5 100%)!important;
+  color:#251c2c!important;
+}
+html[data-theme="light"] body:before{opacity:.42!important;background-size:48px 48px!important}
+html[data-theme="light"] body .main .topbar{background:rgba(251,249,252,.88)!important;border-bottom-color:rgba(66,47,84,.105)!important;box-shadow:0 7px 25px rgba(55,38,69,.035)!important}
+html[data-theme="light"] body .main :is(.page-title,.panel-title,.stat-value,.order-name,.customer-name,.subscription-customer,.finance-title,.wallet-summary-value,.contact-ticket-title){color:#251b2d!important}
+html[data-theme="light"] body .main :is(.panel-sub,.stat-note,.order-sub,.customer-summary,.finance-sub,.wallet-summary-note,.contact-ticket-time,.info-label,.customer-meta-label,.sub-detail-row>span,.subscription-date span,.sub-notes span){color:#756b7e!important}
+
+html[data-theme="light"] body .main .panel,
+html[data-theme="light"] body .main .stat,
+html[data-theme="light"] body .main .wallet-summary-card,
+html[data-theme="light"] body .main .order-card,
+html[data-theme="light"] body .main .customer-card,
+html[data-theme="light"] body .main .subscription-card,
+html[data-theme="light"] body .main .tx-detail-card,
+html[data-theme="light"] body .main .finance-item,
+html[data-theme="light"] body .main .contact-ticket,
+html[data-theme="light"] body .main .service-card,
+html[data-theme="light"] body .main .choice-card,
+html[data-theme="light"] body .main .history-item,
+html[data-theme="light"] body .main .sub-group{
+  background:linear-gradient(145deg,#fff,#f8f5fa)!important;
+  color:#251b2d!important;
+  border-color:#ddd5e4!important;
+  box-shadow:0 8px 24px rgba(49,35,63,.055)!important;
+}
+html[data-theme="light"] body .main .expired-section{background:linear-gradient(145deg,#fff8f9,#f8eef2)!important;border-color:#efccd3!important;box-shadow:0 7px 20px rgba(90,45,60,.04)!important}
+html[data-theme="light"] body .main .panel-head{background:linear-gradient(180deg,rgba(134,85,222,.025),rgba(255,255,255,.72))!important;border-bottom-color:#e0d8e7!important}
+html[data-theme="light"] body .main .wallet-summary-card.primary{background:linear-gradient(145deg,#f0e8fa,#fbf8fd)!important;border-color:#d7c6e9!important}
+
+html[data-theme="light"] body .main :is(.info-box,.customer-meta-box,.sub-detail-row,.sub-credentials>div,.subscription-date,.sub-notes,.payment-help,.payment-id-box,.contact-tip,.contact-ticket-message,.reseller-delivery-note,.subscription-context),
+html[data-theme="light"] body .modal :is(.payment-help,.payment-id-box){background:#f1ecf5!important;border-color:#d9d0e1!important;color:#302637!important}
+html[data-theme="light"] body .main :is(.info-value,.customer-meta-value,.sub-detail-value strong,.subscription-date strong,.finance-value){color:#302637!important}
+html[data-theme="light"] body .main :is(input,select,textarea,.form-input,.form-select,.form-textarea,.tx-filter,.sub-search input),
+html[data-theme="light"] body .modal :is(input,select,textarea,.form-input,.form-select,.form-textarea){background:#f4f0f7!important;color:#261d2d!important;border-color:#d7cedf!important}
+html[data-theme="light"] body .main :is(input,select,textarea,.form-input,.form-select,.form-textarea,.tx-filter,.sub-search input):focus,
+html[data-theme="light"] body .modal :is(input,select,textarea,.form-input,.form-select,.form-textarea):focus{background:#fff!important;border-color:#a77ce2!important;box-shadow:0 0 0 3px rgba(155,92,255,.09)!important}
+html[data-theme="light"] body .main input::placeholder,html[data-theme="light"] body .modal input::placeholder,html[data-theme="light"] body .main textarea::placeholder{color:#817789!important}
+
+html[data-theme="light"] body .main :is(.secondary-action,.customer-action,.customer-menu-btn,.order-button,.copy-payment-button,.sub-copy-btn,.sub-copy-all,.sub-refresh,.tx-clear,.renewal-choice,.order-status-tabs button,.list-pager button),
+html[data-theme="light"] body .modal :is(.copy-payment-button,.renewal-choice){background:linear-gradient(180deg,#fff,#f3eef7)!important;color:#5e5268!important;border-color:#d8cfe0!important;box-shadow:0 4px 13px rgba(57,38,72,.035)!important}
+html[data-theme="light"] body .main .customer-action.primary,
+html[data-theme="light"] body .main .subscription-renew{background:linear-gradient(135deg,#eee5fa,#f7eaf2)!important;color:#69438e!important;border-color:#d8c6e9!important}
+html[data-theme="light"] body .main .subscription-report{background:#fcecef!important;color:#c94c61!important;border-color:#efc9d0!important}
+html[data-theme="light"] body .main .sub-whatsapp{background:#e8f6f0!important;color:#1b7f5d!important;border-color:#c2e4d7!important}
+
+html[data-theme="light"] body .main :is(.badge.delivered,.badge.approved,.subscription-status:not(.expiring):not(.expired),.contact-ticket-status.resolved,.activity-badge.delivered,.activity-badge.approved){color:#167e5c!important;background:#e6f6ef!important;border-color:#bde4d5!important}
+html[data-theme="light"] body .main :is(.badge.processing,.badge.pending,.subscription-status.expiring,.contact-ticket-status.open,.activity-badge.pending){color:#9b6a0c!important;background:#fff4da!important;border-color:#ecd49f!important}
+html[data-theme="light"] body .main :is(.badge.rejected,.badge.cancelled,.subscription-status.expired,.activity-badge.rejected){color:#c94b60!important;background:#fae9ed!important;border-color:#efc4cc!important}
+html[data-theme="light"] body .main .badge.refunded{color:#a65e10!important;background:#fff1e1!important;border-color:#efcfa9!important}
+
+html[data-theme="light"] body .modal{background:rgba(37,27,46,.36)!important}
+html[data-theme="light"] body .modal-card,
+html[data-theme="light"] body .notification-panel,
+html[data-theme="light"] body .notification-head,
+html[data-theme="light"] body .tier-modal-card,
+html[data-theme="light"] body .tier-row{background:linear-gradient(145deg,#fff,#f8f5fa)!important;color:#251b2d!important;border-color:#ddd5e4!important;box-shadow:0 20px 58px rgba(49,35,63,.14)!important}
+html[data-theme="light"] body .notification-item{color:#251b2d!important}
+html[data-theme="light"] body .notification-item:hover{background:#eee8f4!important}
+html[data-theme="light"] body .notification-item.unread{background:#eee4fa!important}
+html[data-theme="light"] body .notification-message{color:#6f6678!important}
+html[data-theme="light"] body .tier-benefit{color:#554a5e!important}
+html[data-theme="light"] body .tier-progress-track{background:#e5deea!important}
+
+/* ---------- SMALL ANIMATION POLISH ---------- */
+@keyframes sublyV41PageIn{from{opacity:.01;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes sublyV41ModalIn{from{opacity:.01;transform:translateY(8px) scale(.987)}to{opacity:1;transform:none}}
+.main .page.active{animation:sublyV41PageIn .28s cubic-bezier(.22,1,.36,1) both!important}
+.modal.show .modal-card,.tier-modal.show .tier-modal-card{animation:sublyV41ModalIn .22s cubic-bezier(.22,1,.36,1) both!important}
+.main .dot{animation:sublyGlow 2.6s ease-in-out infinite}
+
+/* Mobile: slightly calmer spacing and shallower shadows */
+@media(max-width:760px){
+  .main .content{padding-top:20px!important}
+  .main .panel{border-radius:14px!important}
+  .main .panel-head{padding:13px 14px!important}
+  .main .panel-body{padding:14px!important}
+  .main .stat,.main .wallet-summary-card{border-radius:14px!important}
+  .main .order-card,.main .customer-card,.main .subscription-card,.main .tx-detail-card,.main .contact-ticket{box-shadow:0 6px 18px rgba(0,0,0,.08)!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .main .page.active,.modal.show .modal-card,.tier-modal.show .tier-modal-card,.main .dot{animation:none!important}
+  .main *, .modal *, .notification-panel *, .tier-modal *{transition-duration:.01ms!important}
+}

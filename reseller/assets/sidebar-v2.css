@@ -1,0 +1,67 @@
+/* Subly reseller sidebar V2 — visual shell only; preserves existing navigation and behavior */
+#resellerSidebar.sidebar{padding:15px 12px 12px;background:linear-gradient(180deg,rgba(18,14,24,.992),rgba(10,8,14,.995));border-color:rgba(255,255,255,.075);box-shadow:18px 0 54px rgba(0,0,0,.2)}
+#resellerSidebar.sidebar:before{height:150px;background:radial-gradient(circle at 28% -8%,rgba(169,108,255,.18),transparent 68%)}
+#resellerSidebar .brand{min-height:72px;display:flex;align-items:center;gap:11px;padding:3px 8px 13px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.055)}
+#resellerSidebar .brand-logo{width:58px!important;height:58px!important;flex:0 0 58px!important;box-shadow:0 0 0 1px rgba(255,255,255,.085),0 12px 30px rgba(139,92,255,.16)!important}
+#resellerSidebar .brand-sub{margin:0;max-width:116px;color:#8c8496;font-size:8px;line-height:1.55;font-weight:850;letter-spacing:.15em}
+#resellerSidebar .nav{gap:4px}
+#resellerSidebar .nav-btn{min-height:41px;padding:0 11px;border-radius:11px;gap:10px;font-size:11.5px;font-weight:760;color:#a7a0af}
+#resellerSidebar .nav-btn:hover{transform:translateX(2px);background:rgba(255,255,255,.038);border-color:rgba(255,255,255,.055);color:#f7f3fb}
+#resellerSidebar .nav-btn.active{background:linear-gradient(90deg,rgba(159,91,255,.16),rgba(239,76,167,.06));border-color:rgba(169,108,255,.22);box-shadow:inset 2px 0 0 #aa70ff,0 8px 22px rgba(89,48,154,.1)}
+#resellerSidebar .nav-btn.active:after{width:5px;height:5px;right:11px}
+#resellerSidebar .sidebar-contact{margin-top:5px}
+#resellerSidebar .sidebar-bottom{margin-top:auto;padding-top:10px}
+#resellerSidebar .account-box{display:grid;grid-template-columns:minmax(0,1fr) 94px;grid-template-rows:auto auto auto auto;column-gap:8px;row-gap:6px;padding:10px;border:1px solid rgba(255,255,255,.075);border-radius:14px;background:linear-gradient(145deg,rgba(26,21,34,.78),rgba(14,11,19,.88));box-shadow:0 12px 32px rgba(0,0,0,.13);overflow:hidden}
+#resellerSidebar .account-name{grid-column:1;grid-row:1;align-self:end;min-width:0;font-size:11.5px;font-weight:850;color:#f4eff8;line-height:1.25}
+#resellerSidebar .account-tier{grid-column:1;grid-row:2;align-self:start;margin:0;color:#898190;font-size:8.5px;line-height:1.25;letter-spacing:.035em}
+#resellerSidebar .sidebar-balance{grid-column:2;grid-row:1 / span 2;align-self:stretch;display:flex;flex-direction:column;justify-content:center;margin:0;padding:7px 8px;border:1px solid rgba(169,108,255,.15);border-radius:10px;background:linear-gradient(145deg,rgba(169,108,255,.085),rgba(239,91,174,.035));min-width:0}
+#resellerSidebar .sidebar-balance span{font-size:7.5px;line-height:1.2;color:#8f8797;letter-spacing:.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#resellerSidebar .sidebar-balance strong{margin-top:3px;font-size:13px;line-height:1.1;letter-spacing:-.02em;color:#f4eff8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#resellerSidebar .language-toggle,#resellerSidebar .theme-toggle{grid-row:3;min-width:0;width:100%;min-height:37px;margin:2px 0 0;padding:6px 7px;border-radius:9px;gap:5px;border:1px solid rgba(255,255,255,.075);background:rgba(255,255,255,.025);box-shadow:inset 0 1px 0 rgba(255,255,255,.018);font-size:10px;font-weight:790;transition:transform .16s ease,border-color .16s ease,background .16s ease}
+#resellerSidebar .language-toggle{grid-column:1}
+#resellerSidebar .theme-toggle{grid-column:2}
+#resellerSidebar .language-toggle:hover,#resellerSidebar .theme-toggle:hover{transform:translateY(-1px);background:rgba(169,108,255,.055);border-color:rgba(169,108,255,.19)}
+#resellerSidebar .language-icon,#resellerSidebar .theme-icon{width:15px;flex:0 0 15px;font-size:12px;text-align:center}
+#resellerSidebar .language-toggle>span:nth-child(2),#resellerSidebar .theme-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:start}
+#resellerSidebar .language-arrow{display:none}
+#resellerSidebar .theme-label{font-size:0;flex:1}
+html[data-locale=en][data-theme=dark] #resellerSidebar .theme-label:after{content:'Dark';font-size:9px}
+html[data-locale=en][data-theme=light] #resellerSidebar .theme-label:after{content:'Light';font-size:9px}
+html[data-locale=ar][data-theme=dark] #resellerSidebar .theme-label:after{content:'داكن';font-size:9px}
+html[data-locale=ar][data-theme=light] #resellerSidebar .theme-label:after{content:'فاتح';font-size:9px}
+#resellerSidebar .theme-switch{width:26px;height:16px;flex:0 0 26px;padding:2px;direction:ltr!important;background:rgba(255,255,255,.12)}
+#resellerSidebar .theme-switch span{width:12px;height:12px;transform:translateX(0);transition:transform .2s var(--ease)}
+[data-theme=light] #resellerSidebar .theme-switch{background:#d6c1ff}
+[data-theme=light] #resellerSidebar .theme-switch span{transform:translateX(10px)}
+#resellerSidebar .logout{grid-column:1 / -1;grid-row:4;min-height:35px;margin:1px 0 0;padding:6px 9px;border-radius:9px;border-color:rgba(255,101,124,.09);background:rgba(255,101,124,.025);color:#a8a0ad;font-size:10px;font-weight:760;text-align:center}
+#resellerSidebar .logout:hover{transform:translateY(-1px);color:#ff9cab;border-color:rgba(255,101,124,.22);background:rgba(255,101,124,.06)}
+html[dir=rtl] #resellerSidebar.sidebar{box-shadow:-18px 0 54px rgba(0,0,0,.2)}
+html[dir=rtl] #resellerSidebar.sidebar:before{background:radial-gradient(circle at 72% -8%,rgba(169,108,255,.18),transparent 68%)}
+html[dir=rtl] #resellerSidebar .brand .menu-toggle{right:auto!important;left:2px!important}
+html[dir=rtl] #resellerSidebar .nav-btn:hover{transform:translateX(-2px)}
+html[dir=rtl] #resellerSidebar .nav-btn.active{box-shadow:inset -2px 0 0 #aa70ff,0 8px 22px rgba(89,48,154,.1);background:linear-gradient(270deg,rgba(159,91,255,.16),rgba(239,76,167,.06))}
+html[dir=rtl] #resellerSidebar .nav-btn.active:after{right:auto;left:11px}
+html[dir=rtl] #resellerSidebar .brand-sub{letter-spacing:.08em;text-align:right}
+html[dir=rtl] #resellerSidebar .language-toggle,html[dir=rtl] #resellerSidebar .theme-toggle{direction:rtl;text-align:right}
+html[dir=rtl] #resellerSidebar .theme-switch{direction:ltr!important}
+[data-theme=light] #resellerSidebar.sidebar{background:linear-gradient(180deg,#fbf9fd,#f2eef7)!important;border-color:#ddd4e6!important;box-shadow:18px 0 50px rgba(55,38,69,.065)}
+[data-theme=light] #resellerSidebar .brand{border-color:#e1d9e8}
+[data-theme=light] #resellerSidebar .brand-logo{background:#f7f3fa!important;box-shadow:0 0 0 1px #ddd3e6,0 10px 24px rgba(95,62,124,.08)!important}
+[data-theme=light] #resellerSidebar .brand-sub{color:#7e7287}
+[data-theme=light] #resellerSidebar .nav-btn{color:#746a7d}
+[data-theme=light] #resellerSidebar .nav-btn:hover{background:#eee8f4;color:#261d2e;border-color:#ded3e6}
+[data-theme=light] #resellerSidebar .nav-btn.active{color:#321f45;background:linear-gradient(90deg,#eadfff,#f6e8f2);border-color:#d6c2ee;box-shadow:inset 2px 0 0 #9c67e7,0 7px 18px rgba(94,59,125,.065)}
+[data-theme=light] #resellerSidebar .account-box{background:linear-gradient(145deg,#fff,#f5f1f8);border-color:#dbd2e3;box-shadow:0 10px 26px rgba(49,35,63,.065)}
+[data-theme=light] #resellerSidebar .account-name{color:#251b2d}
+[data-theme=light] #resellerSidebar .account-tier{color:#756b7e}
+[data-theme=light] #resellerSidebar .sidebar-balance{background:linear-gradient(145deg,#eee7f7,#faf7fc)!important;border-color:#d8cce4!important;box-shadow:none!important}
+[data-theme=light] #resellerSidebar .sidebar-balance span{color:#756b7e!important}
+[data-theme=light] #resellerSidebar .sidebar-balance strong{color:#251b2d!important}
+[data-theme=light] #resellerSidebar .language-toggle,[data-theme=light] #resellerSidebar .theme-toggle{background:#f1ecf5!important;color:#5e5367!important;border-color:#d9d0e2!important;box-shadow:none}
+[data-theme=light] #resellerSidebar .language-toggle:hover,[data-theme=light] #resellerSidebar .theme-toggle:hover{background:#e9e1f0!important;color:#32253b!important;border-color:#cfc1da!important}
+[data-theme=light] #resellerSidebar .logout{background:#fbf1f3!important;color:#8c6870!important;border-color:#ecd7dc!important}
+[data-theme=light] #resellerSidebar .logout:hover{background:#f9e7eb!important;color:#ba5366!important;border-color:#e8c4cc!important}
+html[dir=rtl][data-theme=light] #resellerSidebar.sidebar{box-shadow:-18px 0 50px rgba(55,38,69,.065)}
+@media(max-height:720px) and (min-width:761px){#resellerSidebar.sidebar{padding-top:10px;padding-bottom:9px}#resellerSidebar .brand{min-height:60px;margin-bottom:5px;padding-bottom:9px}#resellerSidebar .brand-logo{width:48px!important;height:48px!important;flex-basis:48px!important}#resellerSidebar .nav{gap:2px}#resellerSidebar .nav-btn{min-height:36px}#resellerSidebar .sidebar-bottom{padding-top:5px}#resellerSidebar .account-box{padding:8px;row-gap:4px}#resellerSidebar .language-toggle,#resellerSidebar .theme-toggle{min-height:33px}#resellerSidebar .logout{min-height:32px}}
+@media(max-width:760px){#resellerSidebar.sidebar{width:min(86vw,292px);padding:14px 12px 12px}#resellerSidebar .brand{min-height:70px}#resellerSidebar .account-box{grid-template-columns:minmax(0,1fr) 102px}#resellerSidebar .nav-btn{min-height:42px;font-size:12px}.sidebar-backdrop{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}}
+@media(prefers-reduced-motion:reduce){#resellerSidebar .nav-btn,#resellerSidebar .language-toggle,#resellerSidebar .theme-toggle,#resellerSidebar .logout,#resellerSidebar .theme-switch span{transition:none!important}}

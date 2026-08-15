@@ -1,0 +1,8 @@
+/* Subly locale formatting — data-safe plan/duration labels and injected controls */
+(()=>{'use strict';
+ const L=window.SublyLocale;if(!L)return;
+ const original=L.planValue;
+ L.planValue=value=>{const raw=String(value??'');if(L.language!=='ar')return raw;const s=raw.trim(),low=s.toLowerCase();const fixed={'full account':'حساب كامل','1 user':'مستخدم واحد','one user':'مستخدم واحد','standard':'عادي'};if(fixed[low])return fixed[low];const m=low.match(/^([\d.]+)\s*(month|months|year|years|week|weeks|day|days)$/i);if(!m)return original?original(raw):raw;const n=Number(m[1]),unit=m[2].toLowerCase(),num=Number.isInteger(n)?String(n):String(n);if(unit.startsWith('month'))return n===1?'شهر واحد':n===2?'شهران':`${num} أشهر`;if(unit.startsWith('year'))return n===1?'سنة واحدة':n===2?'سنتان':`${num} سنوات`;if(unit.startsWith('week'))return n===1?'أسبوع واحد':n===2?'أسبوعان':`${num} أسابيع`;if(unit.startsWith('day'))return n===1?'يوم واحد':n===2?'يومان':`${num} أيام`;return raw};
+ function syncInjected(){if(L.language!=='ar')return;const b=document.getElementById('sublyThemeToggle');if(b){const light=document.documentElement.dataset.theme==='light';b.setAttribute('aria-label',light?'التبديل إلى الوضع الداكن':'التبديل إلى الوضع الفاتح');const label=b.querySelector('.theme-label');if(label)label.textContent=light?'الوضع الفاتح':'الوضع الداكن'}const menu=document.getElementById('menuToggle');if(menu)menu.setAttribute('aria-label','فتح القائمة')}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',syncInjected,{once:true});else syncInjected();new MutationObserver(syncInjected).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-theme']});
+})();

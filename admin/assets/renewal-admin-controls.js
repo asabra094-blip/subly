@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  let renewalFilter='all';
+  let renewalFilter='pending';
 
   function addStyles(){
     if(document.getElementById('subly-renewal-admin-controls-css'))return;
@@ -48,10 +48,10 @@
     bar.id='renewalStatusFilters';
     bar.className='renewal-status-tabs';
     bar.innerHTML=`
-      <button type="button" class="renewal-status-tab active" data-renewal-filter="all" onclick="setAdminRenewalFilter('all')">All</button>
-      <button type="button" class="renewal-status-tab" data-renewal-filter="pending" onclick="setAdminRenewalFilter('pending')">Pending</button>
-      <button type="button" class="renewal-status-tab" data-renewal-filter="completed" onclick="setAdminRenewalFilter('completed')">Completed</button>
+      <button type="button" class="renewal-status-tab active" data-renewal-filter="pending" onclick="setAdminRenewalFilter('pending')">Pending</button>
+      <button type="button" class="renewal-status-tab" data-renewal-filter="completed" onclick="setAdminRenewalFilter('completed')">Accepted</button>
       <button type="button" class="renewal-status-tab" data-renewal-filter="cancelled" onclick="setAdminRenewalFilter('cancelled')">Cancelled</button>
+      <button type="button" class="renewal-status-tab" data-renewal-filter="all" onclick="setAdminRenewalFilter('all')">All</button>
       <span class="renewal-filter-count" id="renewalFilterCount"></span>`;
     view.insertBefore(bar,list);
     return bar;
@@ -87,11 +87,12 @@
     if(error){c.innerHTML=`<div class="empty">${escapeHtml(error.message||'Could not load renewals.')}</div>`;return}
     adminRenewalTotal=count||0;
     const countLabel=document.getElementById('renewalFilterCount');
-    if(countLabel)countLabel.textContent=`${adminRenewalTotal} ${renewalFilter==='all'?'renewals':renewalFilter}`;
+    const filterLabel=renewalFilter==='completed'?'accepted':renewalFilter;
+    if(countLabel)countLabel.textContent=`${adminRenewalTotal} ${renewalFilter==='all'?'renewals':filterLabel}`;
 
     const rows=data||[];
     if(!rows.length){
-      const label=renewalFilter==='all'?'renewal requests':`${renewalFilter} renewals`;
+      const label=renewalFilter==='all'?'renewal requests':`${filterLabel} renewals`;
       c.innerHTML=`<div class="empty"><div class="empty-icon">🔁</div><div>No ${escapeHtml(label)}.</div></div>`+orderPager(adminRenewalTotal,adminRenewalPage,'changeAdminRenewalPage','renewals');
       return;
     }
@@ -104,7 +105,7 @@
     const profiles=rr.data||[],products=pr.data||[];
     c.innerHTML=rows.map(x=>{
       const r=profiles.find(v=>v.id===x.user_id)||{},p=products.find(v=>v.id===x.renewal_product_id)||{};
-      return `<article class="order-card"><div class="order-top"><div class="admin-order-title">${adminOrderLogo(p)}<div><div class="order-number">Subscription ID ${escapeHtml(adminSubscriptionId({id:x.order_id}))}</div><div class="order-name">${escapeHtml(p.app_name||'Subscription')}</div><div class="order-reseller">${escapeHtml(r.business_name||r.username||'Unknown reseller')}</div></div></div><span class="status-badge ${escapeHtml(x.status||'')}">${escapeHtml(x.status||'unknown')}</span></div><div class="order-v2-grid"><div><span>Account Type</span><strong>${escapeHtml(p.account_type||'Standard')}</strong></div><div><span>Duration</span><strong>${escapeHtml(p.duration||'—')}</strong></div><div><span>Price Paid</span><strong>${money(x.price_paid)}</strong></div><div><span>Requested</span><strong>${escapeHtml(formatDateTime(x.created_at))}</strong></div><div><span>Current Expiry</span><strong>${escapeHtml(formatDateTime(x.old_expires_at))}</strong></div><div><span>New Expiry</span><strong>${escapeHtml(formatDateTime(x.new_expires_at))}</strong></div></div>${x.status==='pending'?`<div class="order-actions"><button class="order-button success" onclick="openCompleteRenewal('${x.id}')">✓ Complete Renewal</button><button class="order-button danger" onclick="openCancelRenewal('${x.id}')">✕ Cancel & Refund</button></div>`:''}</article>`;
+      return `<article class="order-card"><div class="order-top"><div class="admin-order-title">${adminOrderLogo(p)}<div><div class="order-number">Subscription ID ${escapeHtml(adminSubscriptionId({id:x.order_id}))}</div><div class="order-name">${escapeHtml(p.app_name||'Subscription')}</div><div class="order-reseller">${escapeHtml(r.business_name||r.username||'Unknown reseller')}</div></div></div><span class="status-badge ${escapeHtml(x.status||'')}">${escapeHtml(x.status==='completed'?'accepted':(x.status||'unknown'))}</span></div><div class="order-v2-grid"><div><span>Account Type</span><strong>${escapeHtml(p.account_type||'Standard')}</strong></div><div><span>Duration</span><strong>${escapeHtml(p.duration||'—')}</strong></div><div><span>Price Paid</span><strong>${money(x.price_paid)}</strong></div><div><span>Requested</span><strong>${escapeHtml(formatDateTime(x.created_at))}</strong></div><div><span>Current Expiry</span><strong>${escapeHtml(formatDateTime(x.old_expires_at))}</strong></div><div><span>New Expiry</span><strong>${escapeHtml(formatDateTime(x.new_expires_at))}</strong></div></div>${x.status==='pending'?`<div class="order-actions"><button class="order-button success" onclick="openCompleteRenewal('${x.id}')">✓ Complete Renewal</button><button class="order-button danger" onclick="openCancelRenewal('${x.id}')">✕ Cancel & Refund</button></div>`:''}</article>`;
     }).join('')+orderPager(adminRenewalTotal,adminRenewalPage,'changeAdminRenewalPage','renewals');
   };
 

@@ -113,6 +113,30 @@ async function supplierGet(baseUrl: string, path: string, apiKey: string) {
   }
 }
 
+function safeSubscriptionsResponse(body: any) {
+  const rows = Array.isArray(body?.data?.subscriptions) ? body.data.subscriptions : [];
+  return {
+    success: body?.success === true,
+    message: body?.message ?? null,
+    data: {
+      subscriptions: rows.map((row: any) => ({
+        id: row?.id ?? null,
+        email: row?.email ?? null,
+        expiryDate: row?.expiryDate ?? null,
+        title: row?.title ?? null,
+        type: row?.type ?? null,
+        isFull: row?.isFull === true,
+        profileName: row?.profileName ?? null,
+        customerName: row?.customerName ?? null,
+        phoneNumber: row?.phoneNumber ?? null,
+        status: row?.status ?? null,
+        price: row?.price ?? null,
+      })),
+      pagination: body?.data?.pagination ?? null,
+    },
+  };
+}
+
 function validateMockBuy(payload: Record<string, unknown>) {
   const type = String(payload.type || "");
   const phone = cleanDigits(payload.customerPhone);
@@ -213,6 +237,21 @@ Deno.serve(async (req: Request) => {
       if (!apiKey) return json(req, { ok: false, error: "TV Leb Shahid API key is not configured" }, 503);
       const result = await supplierGet(config.base_url || DEFAULT_BASE_URL, "/api/v1/shahid/types", apiKey);
       return json(req, { ok: result.status >= 200 && result.status < 300, supplierStatus: result.status, supplier: result.body }, result.status);
+    }
+
+    if (action === "subscriptions") {
+      if (!apiKey) return json(req, { ok: false, error: "TV Leb Shahid API key is not configured" }, 503);
+      const page = Math.max(1, Math.floor(Number(body?.page) || 1));
+      const pageSize = Math.min(50, Math.max(1, Math.floor(Number(body?.pageSize) || 20)));
+      const searchKey = String(body?.searchKey || "").trim().slice(0, 120);
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (searchKey) params.set("searchKey", searchKey);
+      const result = await supplierGet(config.base_url || DEFAULT_BASE_URL, `/api/v1/shahid/subscriptions?${params.toString()}`, apiKey);
+      return json(req, {
+        ok: result.status >= 200 && result.status < 300,
+        supplierStatus: result.status,
+        supplier: safeSubscriptionsResponse(result.body),
+      }, result.status);
     }
 
     if (action === "preview") {

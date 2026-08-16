@@ -7,6 +7,7 @@
   const accountSelected=new Map();
   const accountLoading=new Set();
   const accountErrors=new Map();
+  const accountRequestVersion=new Map();
 
   const typeRank=value=>{
     const v=String(value||'Standard').trim().toLowerCase();
@@ -92,29 +93,37 @@
     const def=typeof service==='string'?serviceDefByKey(service):service;
     if(!def)return;
     const s=serviceSummary(def),selected=ensureSelected(def),key=def.key;
+    const requestVersion=(accountRequestVersion.get(key)||0)+1;
+    accountRequestVersion.set(key,requestVersion);
     subPages.set(key,page);
     accountLoading.add(key);
     accountErrors.delete(key);
     if(render)renderSubscriptions();
+    const isCurrent=()=>accountRequestVersion.get(key)===requestVersion&&accountSelected.get(key)===selected;
     try{
       const expected=selectedCount(def,selected);
       if(!expected){
+        if(!isCurrent())return;
         subRows.set(key,[]);
         subTotals.set(key,0);
       }else{
         const r=await fetchPage({app:s.app_name,accountType:selected,page});
+        await loadStates(r.rows);
+        if(!isCurrent())return;
         subRows.set(key,r.rows);
         subTotals.set(key,r.total);
-        await loadStates(r.rows);
       }
     }catch(error){
+      if(!isCurrent())return;
       console.error('[SUBLY] account-type subscriptions',error);
       subRows.set(key,[]);
       subTotals.set(key,0);
       accountErrors.set(key,error?.message||'Could not load subscriptions.');
     }finally{
-      accountLoading.delete(key);
-      if(render)renderSubscriptions();
+      if(isCurrent()){
+        accountLoading.delete(key);
+        if(render)renderSubscriptions();
+      }
     }
   };
 

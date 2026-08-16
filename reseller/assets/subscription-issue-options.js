@@ -2,6 +2,21 @@
 (()=>{
   'use strict';
 
+  if(!document.getElementById('subly-subscription-account-tabs-css')){
+    const link=document.createElement('link');
+    link.id='subly-subscription-account-tabs-css';
+    link.rel='stylesheet';
+    link.href='/reseller/assets/subscription-account-tabs.css?v=20260816-1';
+    document.head.appendChild(link);
+  }
+  if(!document.getElementById('subly-subscription-account-tabs-js')){
+    const script=document.createElement('script');
+    script.id='subly-subscription-account-tabs-js';
+    script.src='/reseller/assets/subscription-account-tabs.js?v=20260816-1';
+    script.async=false;
+    document.head.appendChild(script);
+  }
+
   const labels={
     en:{
       link_not_working:'Link not working',

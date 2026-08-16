@@ -1,1 +1,166 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Subly | Orders</title><link rel="icon" type="image/png" href="../subly-logo.png.PNG"><link rel="apple-touch-icon" href="../subly-logo.png.PNG"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><link rel="stylesheet" href="assets/admin.css"><link rel="stylesheet" href="assets/orders.css"><link rel="stylesheet" href="assets/admin-responsive.css"><link rel="stylesheet" href="../portal-readability.css"></head><body data-page="orders-clean"><div id="loadingScreen"><div class="loader-box"><img src="../subly-logo.png.PNG" class="loader-logo" alt="Subly"><p id="loadingText">Checking admin access...</p></div></div><div id="app"><aside class="sidebar" id="adminSidebar"><div class="brand"><img src="../subly-logo.png.PNG" class="brand-logo" alt="Subly"><div class="brand-sub">ADMIN CONTROL</div></div><nav class="nav"><a class="nav-btn" href="index.html">🏠 <span class="nav-text">Dashboard</span></a><a class="nav-btn" href="resellers.html">👥 <span class="nav-text">Resellers</span></a><a class="nav-btn" href="wallets.html">💰 <span class="nav-text">Wallets</span></a><a class="nav-btn" href="topups.html">💳 <span class="nav-text">Top-up Requests</span></a><a class="nav-btn active" href="orders.html">🛒 <span class="nav-text">Orders</span></a><a class="nav-btn" href="support.html">🛟 <span class="nav-text">Support</span></a><a class="nav-btn" href="products.html">📦 <span class="nav-text">Products</span></a><a class="nav-btn" href="pricing.html">💵 <span class="nav-text">Pricing</span></a><a class="nav-btn" href="transactions.html">📜 <span class="nav-text">Transactions</span></a></nav><div class="sidebar-bottom"><div class="admin-box"><div class="admin-name" id="adminName">Administrator</div><div class="admin-role">Subly Admin</div><button class="logout" onclick="logout()">↪ <span class="nav-text">Logout</span></button></div></div></aside><div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileMenu()"></div><main class="main"><header class="topbar"><div class="topbar-left"><button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation" aria-controls="adminSidebar" aria-expanded="false" onclick="toggleMobileMenu()">☰</button><div class="page-title" id="pageTitle">Orders</div></div><div class="status"><span class="dot"></span>System online</div></header><div class="content"><section class="page active" id="orders"><div class="panel"><div class="panel-head"><div><div class="panel-title">Orders</div><div class="panel-sub">Manage subscriptions, deliveries, refunds and renewals</div></div><button class="action" style="padding:10px 14px" onclick="loadAdminOrdersClean()">↻ Refresh</button></div><div class="panel-body"><div class="order-tabs"><button class="order-tab active" data-admin-order-view="subscriptions" onclick="switchAdminOrderView('subscriptions')">Subscriptions</button><button class="order-tab" data-admin-order-view="renewals" onclick="switchAdminOrderView('renewals')">Renewals</button></div><div id="subscriptionOrdersView" class="order-view active"><div class="order-tabs" style="margin:0 0 14px"><button class="order-tab active" data-admin-order-filter="processing" onclick="setAdminOrderFilter('processing')">Pending</button><button class="order-tab" data-admin-order-filter="delivered" onclick="setAdminOrderFilter('delivered')">Accepted</button><button class="order-tab" data-admin-order-filter="refunded" onclick="setAdminOrderFilter('refunded')">Rejected</button><button class="order-tab" data-admin-order-filter="all" onclick="setAdminOrderFilter('all')">All</button></div><div id="ordersList"><div class="empty"><div class="empty-icon">🛒</div><div>Loading orders...</div></div></div></div><div id="renewalOrdersView" class="order-view"><div id="renewalsList"><div class="empty"><div class="empty-icon">🔁</div><div>Open Renewals to load requests.</div></div></div></div></div></div></section></div></main></div><div class="modal" id="deliverOrderModal"><div class="modal-card" style="max-width:650px"><div class="modal-head"><div><h2>Deliver Order</h2><p>Add only the account details required for this service.</p></div><button class="modal-close" onclick="closeDeliverOrder()">✕</button></div><div class="modal-body"><div class="order-summary-box" id="deliverOrderSummary">—</div><div class="requested-profile-note" id="deliverRequestedProfile">—</div><div class="order-modal-grid"><label class="form-group"><span class="form-label">Account / Email</span><input class="form-input" id="deliverAccount" autocomplete="off" placeholder="email@example.com or account"></label><label class="form-group"><span class="form-label">Password</span><input class="form-input" id="deliverPassword" autocomplete="off" placeholder="Password"></label><label class="form-group"><span class="form-label">Profile name</span><input class="form-input" id="deliverProfile" autocomplete="off" placeholder="Profile"></label><label class="form-group"><span class="form-label">PIN</span><input class="form-input" id="deliverPin" autocomplete="off" placeholder="PIN"></label><label class="form-group wide"><span class="form-label">Delivery URL / activation link</span><input class="form-input" id="deliverUrl" type="url" placeholder="https://..."></label><label class="form-group wide"><span class="form-label">Notes / instructions</span><textarea class="form-textarea" id="deliverNotes" placeholder="Anything else the reseller should receive"></textarea></label></div><div id="deliverMessage" class="order-modal-message"></div><button class="modal-submit" id="deliverSubmitButton" onclick="submitDeliverOrder()">Deliver Order</button></div></div></div><div class="modal" id="rejectOrderModal"><div class="modal-card" style="max-width:520px"><div class="modal-head"><div><h2>Reject & Refund</h2><p>The full price will be returned to the reseller wallet.</p></div><button class="modal-close" onclick="closeRejectOrder()">✕</button></div><div class="modal-body"><div class="order-summary-box" id="rejectOrderSummary">—</div><label class="form-group"><span class="form-label">Reason <em>optional</em></span><textarea class="form-textarea" id="rejectReason" placeholder="Out of stock, supplier issue, etc."></textarea></label><div id="rejectMessage" class="order-modal-message"></div><button class="modal-submit danger-submit" id="rejectSubmitButton" onclick="submitRejectOrder()">Reject & Refund</button></div></div></div><script src="assets/admin.js"></script><script src="assets/orders.js"></script><script src="assets/renewal-admin-controls.js?v=20260815-2"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subly | Orders</title>
+  <link rel="icon" type="image/png" href="../subly-logo.png.PNG">
+  <link rel="apple-touch-icon" href="../subly-logo.png.PNG">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="assets/admin.css">
+  <link rel="stylesheet" href="assets/orders.css">
+  <link rel="stylesheet" href="assets/shahid-orders.css?v=20260817-1">
+  <link rel="stylesheet" href="assets/admin-responsive.css">
+  <link rel="stylesheet" href="../portal-readability.css">
+</head>
+<body data-page="orders-clean">
+  <div id="loadingScreen"><div class="loader-box"><img src="../subly-logo.png.PNG" class="loader-logo" alt="Subly"><p id="loadingText">Checking admin access...</p></div></div>
+  <div id="app">
+    <aside class="sidebar" id="adminSidebar">
+      <div class="brand"><img src="../subly-logo.png.PNG" class="brand-logo" alt="Subly"><div class="brand-sub">ADMIN CONTROL</div></div>
+      <nav class="nav">
+        <a class="nav-btn" href="index.html">🏠 <span class="nav-text">Dashboard</span></a>
+        <a class="nav-btn" href="resellers.html">👥 <span class="nav-text">Resellers</span></a>
+        <a class="nav-btn" href="wallets.html">💰 <span class="nav-text">Wallets</span></a>
+        <a class="nav-btn" href="topups.html">💳 <span class="nav-text">Top-up Requests</span></a>
+        <a class="nav-btn active" href="orders.html">🛒 <span class="nav-text">Orders</span></a>
+        <a class="nav-btn" href="support.html">🛟 <span class="nav-text">Support</span></a>
+        <a class="nav-btn" href="products.html">📦 <span class="nav-text">Products</span></a>
+        <a class="nav-btn" href="pricing.html">💵 <span class="nav-text">Pricing</span></a>
+        <a class="nav-btn" href="transactions.html">📜 <span class="nav-text">Transactions</span></a>
+      </nav>
+      <div class="sidebar-bottom"><div class="admin-box"><div class="admin-name" id="adminName">Administrator</div><div class="admin-role">Subly Admin</div><button class="logout" onclick="logout()">↪ <span class="nav-text">Logout</span></button></div></div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileMenu()"></div>
+    <main class="main">
+      <header class="topbar"><div class="topbar-left"><button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation" aria-controls="adminSidebar" aria-expanded="false" onclick="toggleMobileMenu()">☰</button><div class="page-title" id="pageTitle">Orders</div></div><div class="status"><span class="dot"></span>System online</div></header>
+      <div class="content">
+        <section class="page active" id="orders">
+          <div class="panel">
+            <div class="panel-head">
+              <div><div class="panel-title">Orders</div><div class="panel-sub">Manage subscriptions, Shahid automation, deliveries, refunds and renewals</div></div>
+              <button class="action" style="padding:10px 14px" onclick="refreshActiveAdminOrderView()">↻ Refresh</button>
+            </div>
+            <div class="panel-body">
+              <div class="order-tabs">
+                <button class="order-tab active" data-admin-order-view="subscriptions" onclick="switchAdminOrderView('subscriptions')">Subscriptions</button>
+                <button class="order-tab" data-admin-order-view="shahid" onclick="switchAdminOrderView('shahid')">Shahid <span id="shahidDangerTabBadge" class="shahid-danger-count" style="display:none"></span></button>
+                <button class="order-tab" data-admin-order-view="renewals" onclick="switchAdminOrderView('renewals')">Renewals</button>
+              </div>
+
+              <div id="subscriptionOrdersView" class="order-view active">
+                <div class="order-tabs" style="margin:0 0 14px">
+                  <button class="order-tab active" data-admin-order-filter="processing" onclick="setAdminOrderFilter('processing')">Pending</button>
+                  <button class="order-tab" data-admin-order-filter="delivered" onclick="setAdminOrderFilter('delivered')">Accepted</button>
+                  <button class="order-tab" data-admin-order-filter="refunded" onclick="setAdminOrderFilter('refunded')">Rejected</button>
+                  <button class="order-tab" data-admin-order-filter="all" onclick="setAdminOrderFilter('all')">All</button>
+                </div>
+                <div id="ordersList"><div class="empty"><div class="empty-icon">🛒</div><div>Loading orders...</div></div></div>
+              </div>
+
+              <div id="shahidOrdersView" class="order-view">
+                <div class="shahid-control">
+                  <div id="shahidHealthPanel" class="shahid-health"><div class="shahid-health-title">Loading Shahid automation health…</div></div>
+                  <div class="shahid-main-tabs">
+                    <button class="shahid-mini-tab active" data-shahid-section="orders" onclick="switchShahidAdminSection('orders')">Orders & Queue</button>
+                    <button class="shahid-mini-tab" data-shahid-section="renewals" onclick="switchShahidAdminSection('renewals')">Renewals</button>
+                    <button class="shahid-mini-tab danger-tab" data-shahid-section="alerts" onclick="switchShahidAdminSection('alerts')">⚠ Automation Alerts</button>
+                  </div>
+
+                  <div id="shahidOrdersSection" class="shahid-section active">
+                    <div class="shahid-toolbar">
+                      <div class="shahid-toolbar-main"><input id="shahidOrderSearch" class="shahid-search" type="search" placeholder="Search subscription, reseller, phone, customer, supplier ID…" oninput="queueShahidSearch()"></div>
+                      <button class="shahid-btn shahid-refresh" onclick="loadShahidAdminControl(true)">↻ Refresh Shahid</button>
+                    </div>
+                    <div class="shahid-filter-tabs">
+                      <button class="shahid-mini-tab active danger-tab" data-shahid-filter="attention" onclick="setShahidOrderFilter('attention')">Needs Attention</button>
+                      <button class="shahid-mini-tab" data-shahid-filter="active" onclick="setShahidOrderFilter('active')">In Progress</button>
+                      <button class="shahid-mini-tab" data-shahid-filter="queue" onclick="setShahidOrderFilter('queue')">Queue</button>
+                      <button class="shahid-mini-tab" data-shahid-filter="manual" onclick="setShahidOrderFilter('manual')">Manual</button>
+                      <button class="shahid-mini-tab" data-shahid-filter="delivered" onclick="setShahidOrderFilter('delivered')">Delivered</button>
+                      <button class="shahid-mini-tab" data-shahid-filter="refunded" onclick="setShahidOrderFilter('refunded')">Refunded</button>
+                      <button class="shahid-mini-tab" data-shahid-filter="all" onclick="setShahidOrderFilter('all')">All</button>
+                    </div>
+                    <div id="shahidOrdersList" class="shahid-list"><div class="shahid-empty">Open Shahid to load automation orders.</div></div>
+                  </div>
+
+                  <div id="shahidRenewalsSection" class="shahid-section">
+                    <div class="shahid-renewal-warning"><strong>Shahid renewal automation is not enabled.</strong> The supplier documentation does not provide a dedicated renewal endpoint, so these requests stay manual. Complete the renewal in OStories first, then confirm it here.</div>
+                    <div class="shahid-filter-tabs">
+                      <button class="shahid-mini-tab active" data-shahid-renewal-filter="pending" onclick="setShahidRenewalStatus('pending')">Pending</button>
+                      <button class="shahid-mini-tab" data-shahid-renewal-filter="completed" onclick="setShahidRenewalStatus('completed')">Completed</button>
+                      <button class="shahid-mini-tab" data-shahid-renewal-filter="cancelled" onclick="setShahidRenewalStatus('cancelled')">Cancelled</button>
+                      <button class="shahid-mini-tab" data-shahid-renewal-filter="all" onclick="setShahidRenewalStatus('all')">All</button>
+                    </div>
+                    <div id="shahidRenewalsList" class="shahid-list"><div class="shahid-empty">Open Renewals to load Shahid renewal requests.</div></div>
+                  </div>
+
+                  <div id="shahidAlertsSection" class="shahid-section">
+                    <div class="shahid-filter-tabs">
+                      <button class="shahid-mini-tab active danger-tab" data-shahid-incident-filter="open" onclick="setShahidIncidentState('open')">Open Alerts</button>
+                      <button class="shahid-mini-tab" data-shahid-incident-filter="resolved" onclick="setShahidIncidentState('resolved')">Resolved</button>
+                      <button class="shahid-mini-tab" data-shahid-incident-filter="all" onclick="setShahidIncidentState('all')">All</button>
+                    </div>
+                    <div id="shahidIncidentsList" class="shahid-list"><div class="shahid-empty">Open Alerts to load automation warnings.</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="renewalOrdersView" class="order-view"><div id="renewalsList"><div class="empty"><div class="empty-icon">🔁</div><div>Open Renewals to load requests.</div></div></div></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal" id="deliverOrderModal"><div class="modal-card" style="max-width:650px"><div class="modal-head"><div><h2>Deliver Order</h2><p>Add only the account details required for this service.</p></div><button class="modal-close" onclick="closeDeliverOrder()">✕</button></div><div class="modal-body"><div class="order-summary-box" id="deliverOrderSummary">—</div><div class="requested-profile-note" id="deliverRequestedProfile">—</div><div class="order-modal-grid"><label class="form-group"><span class="form-label">Account / Email</span><input class="form-input" id="deliverAccount" autocomplete="off" placeholder="email@example.com or account"></label><label class="form-group"><span class="form-label">Password</span><input class="form-input" id="deliverPassword" autocomplete="off" placeholder="Password"></label><label class="form-group"><span class="form-label">Profile name</span><input class="form-input" id="deliverProfile" autocomplete="off" placeholder="Profile"></label><label class="form-group"><span class="form-label">PIN</span><input class="form-input" id="deliverPin" autocomplete="off" placeholder="PIN"></label><label class="form-group wide"><span class="form-label">Delivery URL / activation link</span><input class="form-input" id="deliverUrl" type="url" placeholder="https://..."></label><label class="form-group wide"><span class="form-label">Notes / instructions</span><textarea class="form-textarea" id="deliverNotes" placeholder="Anything else the reseller should receive"></textarea></label></div><div id="deliverMessage" class="order-modal-message"></div><button class="modal-submit" id="deliverSubmitButton" onclick="submitDeliverOrder()">Deliver Order</button></div></div></div>
+  <div class="modal" id="rejectOrderModal"><div class="modal-card" style="max-width:520px"><div class="modal-head"><div><h2>Reject & Refund</h2><p>The full price will be returned to the reseller wallet.</p></div><button class="modal-close" onclick="closeRejectOrder()">✕</button></div><div class="modal-body"><div class="order-summary-box" id="rejectOrderSummary">—</div><label class="form-group"><span class="form-label">Reason <em>optional</em></span><textarea class="form-textarea" id="rejectReason" placeholder="Out of stock, supplier issue, etc."></textarea></label><div id="rejectMessage" class="order-modal-message"></div><button class="modal-submit danger-submit" id="rejectSubmitButton" onclick="submitRejectOrder()">Reject & Refund</button></div></div></div>
+
+  <div class="modal" id="shahidRecoveryModal">
+    <div class="modal-card">
+      <div class="modal-head"><div><h2>🚨 Shahid Purchase Recovery</h2><p>Use this only when Subly cannot tell whether OStories completed the purchase.</p></div><button class="modal-close" onclick="closeShahidRecovery()">✕</button></div>
+      <div class="modal-body">
+        <div id="shahidRecoverySummary" class="shahid-recovery-box">—</div>
+        <div class="shahid-actions"><button class="shahid-btn primary" onclick="inspectShahidRecovery()">Inspect OStories</button></div>
+        <div id="shahidSupplierResults" class="shahid-recovery-results"></div>
+        <div class="shahid-recovery-grid">
+          <label class="form-group"><span class="form-label">Supplier subscription ID</span><input class="form-input" id="shahidRecoverySupplierId" autocomplete="off" placeholder="OStories / TV Leb ID"></label>
+          <label class="form-group"><span class="form-label">Profile name <em>if needed</em></span><input class="form-input" id="shahidRecoveryProfile" autocomplete="off" placeholder="Exact OStories profile"></label>
+        </div>
+        <div class="shahid-actions"><button class="shahid-btn primary" onclick="recoverShahidUnknown()">Link & Recover Order</button></div>
+        <div class="shahid-danger-zone">
+          <h3>Danger zone — confirm no supplier purchase happened</h3>
+          <p>Only use this after checking OStories. Subly will run another supplier check before refunding. If a possible new supplier subscription is detected, the refund is blocked.</p>
+          <label class="shahid-check"><input id="shahidRecoveryManualVerified" type="checkbox"> <span>I manually checked OStories for this reseller and confirmed there is no purchase for this order.</span></label>
+          <label class="form-group"><span class="form-label">Type REFUND</span><input class="form-input" id="shahidRecoveryConfirm" autocomplete="off" placeholder="REFUND"></label>
+          <div class="shahid-actions"><button class="shahid-btn danger" onclick="refundUnknownShahid()">Confirm No Purchase & Refund</button></div>
+        </div>
+        <div id="shahidRecoveryMessage" class="shahid-message"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="shahidManualDeliveryModal">
+    <div class="modal-card">
+      <div class="modal-head"><div><h2>Manual Shahid Delivery</h2><p>For old/manual Shahid orders only. Automated orders are protected from manual delivery.</p></div><button class="modal-close" onclick="closeShahidManualDelivery()">✕</button></div>
+      <div class="modal-body">
+        <div id="shahidManualSummary" class="order-summary-box">—</div>
+        <div class="order-modal-grid">
+          <label class="form-group"><span class="form-label">Account / Email</span><input class="form-input" id="shahidManualAccount" autocomplete="off"></label>
+          <label class="form-group"><span class="form-label">Password</span><input class="form-input" id="shahidManualPassword" autocomplete="off"></label>
+          <label class="form-group wide" id="shahidManualProfileWrap"><span class="form-label">Profile name</span><input class="form-input" id="shahidManualProfile" autocomplete="off"></label>
+          <label class="form-group wide"><span class="form-label">Notes <em>optional</em></span><textarea class="form-textarea" id="shahidManualNotes"></textarea></label>
+        </div>
+        <div id="shahidManualMessage" class="shahid-message"></div>
+        <button class="modal-submit" onclick="submitShahidManualDelivery()">Deliver Shahid Order</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/admin.js"></script>
+  <script src="assets/orders.js"></script>
+  <script src="assets/shahid-orders.js?v=20260817-1"></script>
+  <script src="assets/renewal-admin-controls.js?v=20260815-2"></script>
+</body>
+</html>

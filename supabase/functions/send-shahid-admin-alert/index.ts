@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ADMIN_ORDERS_URL = "https://www.sublylb.com/admin/orders.html";
+const ADMIN_ORDERS_URL = "https://www.sublylb.com/admin/orders.html#shahid";
 const esc = (value: unknown) =>
   String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -81,7 +81,7 @@ Deno.serve(async (req: Request) => {
       `<b>Product:</b> ${esc(product?.app_name || "Shahid")} • ${esc(product?.account_type || "—")} • ${esc(product?.duration || "—")}\n` +
       `<b>Code:</b> <code>${esc(incident.code)}</code>\n` +
       `<b>Details:</b> ${esc(incident.message)}` +
-      (autoRetry === false ? `\n\n<b>Safety:</b> No automatic retry was attempted.` : "");
+      (autoRetry === false ? `\n\n<b>Safety:</b> No automatic retry was attempted. The reseller Shahid queue is protected until this is resolved.` : "");
 
     const token = Deno.env.get("TELEGRAM_BOT_TOKEN") || Deno.env.get("Bottoken") || Deno.env.get("BOTTOKEN");
     const chatId = Deno.env.get("TELEGRAM_CHAT_ID") || Deno.env.get("Idtelegram") || Deno.env.get("IDTELEGRAM");
@@ -96,7 +96,7 @@ Deno.serve(async (req: Request) => {
         parse_mode: "HTML",
         disable_web_page_preview: true,
         reply_markup: {
-          inline_keyboard: [[{ text: "Open Subly Orders", url: ADMIN_ORDERS_URL }]],
+          inline_keyboard: [[{ text: "Open Shahid Control Center", url: ADMIN_ORDERS_URL }]],
         },
       }),
     });

@@ -290,7 +290,12 @@ Deno.serve(async (req: Request) => {
       return json(req, {
         ok: true,
         order: { id: ctx.order.id, subscriptionCode: ctx.order.subscription_code, status: ctx.order.status },
-        guard: { state: ctx.guard.state, ambiguousAt: ctx.guard.ambiguous_at, baselineCount: Array.isArray(ctx.guard?.prebuy_metadata?.profileBaseline) ? ctx.guard.prebuy_metadata.profileBaseline.length : 0 },
+        guard: {
+          state: ctx.guard.state,
+          ambiguousAt: ctx.guard.ambiguous_at,
+          baselineCount: Array.isArray(ctx.guard?.prebuy_metadata?.profileBaseline) ? ctx.guard.prebuy_metadata.profileBaseline.length : 0,
+          baselineCapturedAt: ctx.guard?.prebuy_metadata?.baselineCapturedAt || null,
+        },
         reseller: { name: ctx.reseller.business_name || ctx.reseller.username, phone: ctx.phone },
         supplier: lookup.rows.map(safeRow),
       });
@@ -363,6 +368,8 @@ Deno.serve(async (req: Request) => {
     if (action === "confirm_not_purchased") {
       if (!apiKey) return json(req, { ok: false, error: "TV Leb Shahid API key is not configured" }, 503);
       if (String(body?.confirmation || "").trim().toUpperCase() !== "REFUND") return json(req, { ok: false, error: "Type REFUND to confirm" }, 400);
+      if (body?.manualVerified !== true) return json(req, { ok: false, needsManualVerification: true, error: "Check OStories manually and tick the verification checkbox before refunding an ambiguous purchase." }, 409);
+
       const orderId = String(body?.orderId || "").trim();
       const ctx: any = await loadRecoveryContext(service, orderId);
       if (ctx.error) return json(req, { ok: false, error: ctx.error }, 400);
@@ -371,19 +378,25 @@ Deno.serve(async (req: Request) => {
       if (!lookup.ok) return json(req, { ok: false, error: "Supplier verification failed. Refund is blocked until OStories can be checked safely." }, 502);
 
       const baseline = Array.isArray(ctx.guard?.prebuy_metadata?.profileBaseline) ? ctx.guard.prebuy_metadata.profileBaseline : [];
-      if (baseline.length) {
+      const baselineCaptured = Boolean(ctx.guard?.prebuy_metadata?.baselineCapturedAt);
+      if (baselineCaptured) {
         const baselineSet = new Set(baseline.map((row: any) => profileFingerprint(row?.id, row)));
+        const currentSet = new Set(lookup.rows.map((row: any) => profileFingerprint(row?.id, row)));
         const newRows = lookup.rows.filter((row: any) => !baselineSet.has(profileFingerprint(row?.id, row)));
+        const missingBaselineRows = baseline.filter((row: any) => !currentSet.has(profileFingerprint(row?.id, row)));
         if (newRows.length) {
           return json(req, { ok: false, possiblePurchaseFound: true, error: "A supplier subscription/profile exists that was not in the pre-purchase baseline. Refund blocked.", candidates: newRows.map(safeRow) }, 409);
         }
-      } else if (body?.manualVerified !== true) {
-        return json(req, { ok: false, needsManualVerification: true, error: "This order has no saved pre-purchase baseline. Check OStories manually, then confirm again." }, 409);
+        if (missingBaselineRows.length) {
+          return json(req, { ok: false, supplierDataChanged: true, error: "OStories no longer matches the saved pre-purchase baseline. Refund blocked because the supplier result is inconsistent." }, 409);
+        }
       }
 
       const { data, error } = await service.rpc("service_refund_tvleb_shahid_unknown_purchase", {
         p_order_id: orderId,
-        p_reason: "Admin verified OStories and supplier lookup before refunding an ambiguous Shahid purchase",
+        p_reason: baselineCaptured
+          ? "Admin manually verified OStories and supplier data exactly matched the saved pre-purchase baseline"
+          : "Admin manually verified OStories; no saved baseline was available for this ambiguous purchase",
       });
       if (error) return json(req, { ok: false, error: error.message }, 409);
       return json(req, { ok: true, refunded: true, result: data });

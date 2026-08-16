@@ -1,0 +1,568 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const PROVIDER = "tvleb_shahid";
+const SECRET_NAME = "subly_shahid_worker_secret";
+const DEFAULT_BASE_URL = "https://shahid.tvleb.com";
+const MAX_PENDING_BATCH = 15;
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
+
+const digits = (value: unknown) => String(value ?? "").replace(/\D/g, "");
+const normalizedPhone = (value: unknown) => {
+  const d = digits(value);
+  if (d.startsWith("961")) return d;
+  if (d.startsWith("0") && d.length >= 8) return `961${d.slice(1)}`;
+  if (d.length === 8) return `961${d}`;
+  return d;
+};
+const shortMessage = (value: unknown, fallback = "Supplier request failed") => {
+  const text = String(value ?? "").trim();
+  return (text || fallback).slice(0, 500);
+};
+const validFutureIso = (value: unknown) => {
+  const d = new Date(String(value ?? ""));
+  return Number.isFinite(d.getTime()) && d.getTime() > Date.now() ? d.toISOString() : null;
+};
+
+function createServiceClient() {
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !serviceRole) throw new Error("Supabase worker environment is incomplete");
+  return createClient(url, serviceRole, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function authenticateInternal(req: Request, service: any) {
+  const supplied = req.headers.get("x-subly-shahid-secret") || "";
+  if (!supplied) return false;
+  const { data, error } = await service.rpc("validate_internal_webhook_secret", {
+    p_name: SECRET_NAME,
+    p_secret: supplied,
+  });
+  return !error && data === true;
+}
+
+async function supplierConfig(service: any) {
+  const { data, error } = await service
+    .from("supplier_integrations")
+    .select("provider,base_url,enabled,live_purchase_enabled")
+    .eq("provider", PROVIDER)
+    .maybeSingle();
+  if (error) throw error;
+  return data || {
+    provider: PROVIDER,
+    base_url: DEFAULT_BASE_URL,
+    enabled: false,
+    live_purchase_enabled: false,
+  };
+}
+
+async function supplierApiKey(service: any) {
+  const { data, error } = await service.rpc("get_tvleb_shahid_api_key");
+  if (error) throw error;
+  return String(data || "").trim();
+}
+
+type SupplierResult = {
+  status: number | null;
+  body: any;
+  networkError: boolean;
+  error: string | null;
+};
+
+async function supplierRequest(
+  baseUrl: string,
+  apiKey: string,
+  method: "GET" | "POST",
+  path: string,
+  body?: Record<string, unknown>,
+  timeoutMs = 12000,
+): Promise<SupplierResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
+        method,
+        headers: {
+          "x-api-key": apiKey,
+          accept: "application/json",
+          ...(method === "POST" ? { "content-type": "application/json" } : {}),
+        },
+        body: method === "POST" ? JSON.stringify(body || {}) : undefined,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      return {
+        status: null,
+        body: null,
+        networkError: true,
+        error: error instanceof Error ? error.message : "Network request failed",
+      };
+    }
+
+    const text = await response.text();
+    let parsed: any = null;
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      parsed = null;
+    }
+    return {
+      status: response.status,
+      body: parsed,
+      networkError: false,
+      error: parsed ? null : "Supplier returned a non-JSON response",
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function addIncident(
+  service: any,
+  orderId: string,
+  severity: "info" | "warning" | "critical",
+  code: string,
+  message: string,
+  metadata: Record<string, unknown> = {},
+) {
+  const { error } = await service.from("supplier_incidents").insert({
+    provider: PROVIDER,
+    order_id: orderId,
+    severity,
+    code,
+    message: shortMessage(message),
+    metadata,
+  });
+  if (error) console.error("[SHAHID_WORKER] incident insert failed", orderId, code, error.message);
+}
+
+async function safeRefund(
+  service: any,
+  orderId: string,
+  reason: string,
+  code: string,
+  httpStatus: number | null = null,
+) {
+  const { data, error } = await service.rpc("fail_tvleb_shahid_order_and_refund", {
+    p_order_id: orderId,
+    p_reason: shortMessage(reason),
+    p_code: code,
+    p_http_status: httpStatus,
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function markAmbiguous(
+  service: any,
+  orderId: string,
+  reason: string,
+  httpStatus: number | null = null,
+) {
+  const { data, error } = await service.rpc("mark_tvleb_shahid_purchase_unknown", {
+    p_order_id: orderId,
+    p_reason: shortMessage(reason),
+    p_http_status: httpStatus,
+  });
+  if (error) throw error;
+  return data;
+}
+
+function supplierTypeMonths(type: string) {
+  if (type === "1-month") return 1;
+  if (type === "3-month") return 3;
+  if (type === "1-year") return 12;
+  return null;
+}
+
+function priceFromTypes(body: any, supplierType: string, isFull: boolean) {
+  const months = supplierTypeMonths(supplierType);
+  if (!months || body?.success !== true || !Array.isArray(body?.data)) return null;
+  const item = body.data.find((x: any) => Number(x?.months) === months);
+  const price = Number(isFull ? item?.price?.full : item?.price?.user);
+  return Number.isFinite(price) && price >= 0 ? price : null;
+}
+
+function responseStatus(data: any) {
+  const raw = String(data?.status || "").trim().toLowerCase();
+  if (["pending", "active", "near_expiry", "expired"].includes(raw)) return raw;
+  if (String(data?.email || "").toLowerCase().includes("pending")) return "pending";
+  return "active";
+}
+
+function findCustomerProfile(rows: any[], phone: string) {
+  const wanted = normalizedPhone(phone);
+  return rows.find((row: any) => normalizedPhone(row?.phoneNumber) === wanted) || null;
+}
+
+function nextPollSeconds(attempts: number) {
+  if (attempts < 3) return 60;
+  if (attempts < 6) return 120;
+  return 300;
+}
+
+async function recordPoll(
+  service: any,
+  orderId: string,
+  status: string,
+  httpStatus: number | null,
+  profileName: string | null,
+  expiryAt: string | null,
+  errorText: string | null,
+  nextSeconds: number,
+) {
+  const { error } = await service.rpc("record_tvleb_shahid_poll", {
+    p_order_id: orderId,
+    p_status: status,
+    p_http_status: httpStatus,
+    p_profile_name: profileName,
+    p_expiry_at: expiryAt,
+    p_error: errorText,
+    p_next_check_seconds: nextSeconds,
+  });
+  if (error) throw error;
+}
+
+async function deliverProfile(
+  service: any,
+  orderId: string,
+  supplierId: string,
+  isFull: boolean,
+  profile: any,
+  fallbackPrice: number | null,
+) {
+  const account = String(profile?.email || "").trim();
+  const password = String(profile?.password || "").trim();
+  const profileName = String(profile?.profileName || "").trim();
+  const expiryAt = validFutureIso(profile?.expiryDate);
+  const supplierPrice = Number(profile?.price);
+  const price = Number.isFinite(supplierPrice) ? supplierPrice : fallbackPrice;
+
+  if (!account || account.toLowerCase().includes("pending") || !password || !expiryAt || (!isFull && !profileName)) {
+    return { delivered: false, reason: "supplier_details_incomplete" };
+  }
+
+  const { data, error } = await service.rpc("deliver_tvleb_shahid_order", {
+    p_order_id: orderId,
+    p_supplier_subscription_id: supplierId,
+    p_account: account,
+    p_password: password,
+    p_profile: isFull ? null : profileName,
+    p_expiry_at: expiryAt,
+    p_supplier_price: price,
+  });
+  if (error) throw error;
+  return { delivered: true, data };
+}
+
+async function resolveAfterPurchase(
+  service: any,
+  baseUrl: string,
+  apiKey: string,
+  orderId: string,
+  supplierId: string,
+  customerPhone: string,
+  isFull: boolean,
+  supplierPrice: number | null,
+) {
+  const result = await supplierRequest(
+    baseUrl,
+    apiKey,
+    "GET",
+    `/api/v1/shahid/subscription/${encodeURIComponent(supplierId)}`,
+  );
+
+  if (result.networkError || result.status === null) {
+    await recordPoll(service, orderId, "pending", null, null, null, shortMessage(result.error), 60);
+    return { delivered: false, pending: true, reason: "status_check_network_error" };
+  }
+
+  if (result.status !== 200 || result.body?.success !== true || !Array.isArray(result.body?.data)) {
+    await recordPoll(
+      service,
+      orderId,
+      "pending",
+      result.status,
+      null,
+      null,
+      shortMessage(result.body?.message || result.error || `Status check returned ${result.status}`),
+      result.status === 429 ? 120 : 60,
+    );
+    return { delivered: false, pending: true, reason: "status_check_not_ready" };
+  }
+
+  const matched = findCustomerProfile(result.body.data, customerPhone);
+  if (!matched) {
+    await recordPoll(service, orderId, "pending", result.status, null, null, "Customer profile not visible yet", 60);
+    return { delivered: false, pending: true, reason: "customer_profile_not_visible" };
+  }
+
+  const status = String(matched?.status || "pending").toLowerCase();
+  const expiryAt = validFutureIso(matched?.expiryDate);
+  if (status === "expired") {
+    await recordPoll(service, orderId, "expired", result.status, matched?.profileName || null, expiryAt, "Fresh supplier purchase returned expired", 300);
+    await addIncident(service, orderId, "critical", "fresh_purchase_expired", "Supplier returned an expired Shahid subscription after a confirmed purchase.");
+    return { delivered: false, pending: false, reason: "supplier_returned_expired" };
+  }
+
+  if (status !== "active" && status !== "near_expiry") {
+    await recordPoll(service, orderId, "pending", result.status, matched?.profileName || null, expiryAt, null, 60);
+    return { delivered: false, pending: true, reason: "supplier_pending" };
+  }
+
+  const delivery = await deliverProfile(service, orderId, supplierId, isFull, matched, supplierPrice);
+  if (!delivery.delivered) {
+    await recordPoll(service, orderId, "pending", result.status, matched?.profileName || null, expiryAt, delivery.reason, 60);
+    return { delivered: false, pending: true, reason: delivery.reason };
+  }
+  return delivery;
+}
+
+async function customerExistsAtSupplier(baseUrl: string, apiKey: string, phone: string) {
+  const params = new URLSearchParams({ page: "1", pageSize: "20", searchKey: phone });
+  const result = await supplierRequest(baseUrl, apiKey, "GET", `/api/v1/shahid/subscriptions?${params.toString()}`);
+  if (result.networkError || result.status !== 200 || result.body?.success !== true) {
+    return { ok: false, exists: false, status: result.status, message: shortMessage(result.body?.message || result.error || "Could not verify existing supplier customer") };
+  }
+  const rows = Array.isArray(result.body?.data?.subscriptions) ? result.body.data.subscriptions : [];
+  const exists = rows.some((row: any) => normalizedPhone(row?.phoneNumber) === normalizedPhone(phone));
+  return { ok: true, exists, status: result.status, message: null };
+}
+
+async function processOrder(service: any, orderId: string) {
+  const { data: claim, error: claimError } = await service.rpc("claim_tvleb_shahid_purchase", {
+    p_order_id: orderId,
+  });
+  if (claimError) throw claimError;
+  if (!claim?.claimed) return { ok: true, action: "noop", reason: claim?.reason || "not_claimed", state: claim?.state || null };
+
+  const config = await supplierConfig(service);
+  const apiKey = await supplierApiKey(service);
+  const baseUrl = String(claim.baseUrl || config.base_url || DEFAULT_BASE_URL);
+  const phone = normalizedPhone(claim.customerPhone);
+  const firstName = String(claim.customerFirstName || "").trim();
+  const lastName = String(claim.customerLastName || "").trim();
+  const supplierType = String(claim.supplierType || "");
+  const isFull = claim.isFull === true;
+  const storedSupplierCost = Number(claim.supplierCost);
+  const resellerPrice = Number(claim.resellerPrice);
+
+  if (!apiKey) return safeRefund(service, orderId, "Shahid API key is not configured", "api_key_missing");
+  if (phone.length < 10) return safeRefund(service, orderId, "Customer phone number is invalid for the Shahid supplier", "invalid_customer_phone");
+  if (!firstName) return safeRefund(service, orderId, "Customer first name is required for Shahid automation", "customer_first_name_required");
+
+  if (!lastName) {
+    const existing = await customerExistsAtSupplier(baseUrl, apiKey, phone);
+    if (!existing.ok) {
+      return safeRefund(service, orderId, existing.message || "Could not verify supplier customer", "customer_preflight_failed", existing.status);
+    }
+    if (!existing.exists) {
+      return safeRefund(service, orderId, "Customer last name is required for a new Shahid supplier customer", "customer_last_name_required");
+    }
+  }
+
+  const typeResult = await supplierRequest(baseUrl, apiKey, "GET", "/api/v1/shahid/types");
+  if (typeResult.networkError || typeResult.status !== 200 || typeResult.body?.success !== true) {
+    return safeRefund(
+      service,
+      orderId,
+      shortMessage(typeResult.body?.message || typeResult.error || "Could not verify Shahid package before purchase"),
+      "package_preflight_failed",
+      typeResult.status,
+    );
+  }
+
+  const liveSupplierCost = priceFromTypes(typeResult.body, supplierType, isFull);
+  if (liveSupplierCost === null) {
+    return safeRefund(service, orderId, "The selected Shahid package is not available from the supplier", "supplier_package_unavailable", typeResult.status);
+  }
+  if (Number.isFinite(storedSupplierCost) && storedSupplierCost > 0 && liveSupplierCost > storedSupplierCost + 0.01) {
+    return safeRefund(
+      service,
+      orderId,
+      `Supplier cost changed from ${storedSupplierCost.toFixed(2)} to ${liveSupplierCost.toFixed(2)}; purchase blocked`,
+      "supplier_price_increased",
+      typeResult.status,
+    );
+  }
+  if (Number.isFinite(resellerPrice) && liveSupplierCost > resellerPrice) {
+    return safeRefund(service, orderId, "Supplier cost is higher than the reseller sale price; purchase blocked", "negative_margin_blocked", typeResult.status);
+  }
+
+  const { error: startedError } = await service.rpc("mark_tvleb_shahid_purchase_started", { p_order_id: orderId });
+  if (startedError) throw startedError;
+
+  const buyPayload: Record<string, unknown> = {
+    type: supplierType,
+    customerPhone: phone,
+    isFull,
+  };
+  if (firstName) buyPayload.customerFirstName = firstName;
+  if (lastName) buyPayload.customerLastName = lastName;
+  if (phone.startsWith("961")) buyPayload.countryCode = "lb";
+
+  const purchase = await supplierRequest(baseUrl, apiKey, "POST", "/api/v1/shahid/buy", buyPayload, 15000);
+
+  if (purchase.networkError || purchase.status === null) {
+    await markAmbiguous(service, orderId, `Network result became ambiguous after Shahid purchase started: ${shortMessage(purchase.error)}`);
+    return { ok: false, ambiguous: true, automaticRetry: false };
+  }
+  if (purchase.status >= 500) {
+    await markAmbiguous(service, orderId, `Supplier returned HTTP ${purchase.status} after Shahid purchase started`, purchase.status);
+    return { ok: false, ambiguous: true, automaticRetry: false };
+  }
+  if (purchase.status === 429 || purchase.status === 400 || purchase.status === 401 || purchase.status === 403 || purchase.status === 404) {
+    return safeRefund(service, orderId, shortMessage(purchase.body?.message || `Supplier rejected purchase with HTTP ${purchase.status}`), "supplier_rejected_purchase", purchase.status);
+  }
+  if (purchase.status < 200 || purchase.status >= 300) {
+    await markAmbiguous(service, orderId, `Unexpected HTTP ${purchase.status} after Shahid purchase started`, purchase.status);
+    return { ok: false, ambiguous: true, automaticRetry: false };
+  }
+  if (purchase.body?.success !== true) {
+    return safeRefund(service, orderId, shortMessage(purchase.body?.message || "Supplier rejected Shahid purchase"), "supplier_purchase_failed", purchase.status);
+  }
+
+  const purchased = purchase.body?.data;
+  const supplierId = String(purchased?.id || "").trim();
+  if (!supplierId) {
+    await markAmbiguous(service, orderId, "Supplier returned success without a subscription ID", purchase.status);
+    return { ok: false, ambiguous: true, automaticRetry: false };
+  }
+
+  const supplierStatus = responseStatus(purchased);
+  const supplierPriceValue = Number(purchased?.price);
+  const supplierPrice = Number.isFinite(supplierPriceValue) ? supplierPriceValue : liveSupplierCost;
+  const supplierExpiry = validFutureIso(purchased?.expiryDate);
+  const profileName = String(purchased?.profileName || "").trim() || null;
+
+  const { error: recordError } = await service.rpc("record_tvleb_shahid_purchase_success", {
+    p_order_id: orderId,
+    p_supplier_subscription_id: supplierId,
+    p_supplier_status: supplierStatus,
+    p_customer_phone: phone,
+    p_supplier_is_full: isFull,
+    p_supplier_price: supplierPrice,
+    p_supplier_expiry_at: supplierExpiry,
+    p_supplier_profile_name: profileName,
+    p_http_status: purchase.status,
+    p_message: shortMessage(purchase.body?.message || "Purchase accepted"),
+  });
+  if (recordError) throw recordError;
+
+  if (supplierStatus === "pending") {
+    return { ok: true, purchased: true, pending: true, supplierId };
+  }
+
+  return await resolveAfterPurchase(service, baseUrl, apiKey, orderId, supplierId, phone, isFull, supplierPrice);
+}
+
+async function pollPending(service: any) {
+  const config = await supplierConfig(service);
+  if (!config.enabled || !config.live_purchase_enabled) return { ok: true, action: "noop", reason: "live_purchase_disabled" };
+  const apiKey = await supplierApiKey(service);
+  if (!apiKey) throw new Error("TV Leb Shahid API key is not configured");
+  const baseUrl = String(config.base_url || DEFAULT_BASE_URL);
+
+  const { data: links, error } = await service.rpc("get_tvleb_shahid_pending_links", { p_limit: MAX_PENDING_BATCH });
+  if (error) throw error;
+  const pending = Array.isArray(links) ? links : [];
+  if (!pending.length) return { ok: true, checked: 0, delivered: 0 };
+
+  const groups = new Map<string, any[]>();
+  for (const link of pending) {
+    const supplierId = String(link?.supplier_subscription_id || "");
+    if (!supplierId) continue;
+    if (!groups.has(supplierId)) groups.set(supplierId, []);
+    groups.get(supplierId)!.push(link);
+  }
+
+  let checked = 0;
+  let delivered = 0;
+  for (const [supplierId, group] of groups) {
+    const result = await supplierRequest(baseUrl, apiKey, "GET", `/api/v1/shahid/subscription/${encodeURIComponent(supplierId)}`);
+    checked++;
+
+    if (result.networkError || result.status !== 200 || result.body?.success !== true || !Array.isArray(result.body?.data)) {
+      const errorText = shortMessage(result.body?.message || result.error || `Supplier status check returned ${result.status ?? "network error"}`);
+      for (const link of group) {
+        const attempts = Number(link?.check_attempts || 0);
+        await recordPoll(service, link.order_id, "pending", result.status, null, null, errorText, result.status === 429 ? 120 : nextPollSeconds(attempts));
+        if (attempts === 9) {
+          await addIncident(service, link.order_id, "warning", "pending_status_delayed", "Shahid purchase is still pending after repeated supplier checks.", { supplierId });
+        }
+      }
+      continue;
+    }
+
+    for (const link of group) {
+      const attempts = Number(link?.check_attempts || 0);
+      const matched = findCustomerProfile(result.body.data, link.customer_phone);
+      if (!matched) {
+        await recordPoll(service, link.order_id, "pending", result.status, null, null, "Customer profile not visible yet", nextPollSeconds(attempts));
+        if (attempts === 9) {
+          await addIncident(service, link.order_id, "warning", "pending_profile_not_visible", "Supplier account exists but this customer's Shahid profile is still not visible.", { supplierId });
+        }
+        continue;
+      }
+
+      const status = String(matched?.status || "pending").toLowerCase();
+      const expiryAt = validFutureIso(matched?.expiryDate);
+      if (status === "expired") {
+        await recordPoll(service, link.order_id, "expired", result.status, matched?.profileName || null, expiryAt, "Supplier returned expired status", 300);
+        await addIncident(service, link.order_id, "critical", "pending_purchase_became_expired", "A charged Shahid purchase became expired before Subly could deliver it.", { supplierId });
+        continue;
+      }
+
+      if (status !== "active" && status !== "near_expiry") {
+        await recordPoll(service, link.order_id, "pending", result.status, matched?.profileName || null, expiryAt, null, nextPollSeconds(attempts));
+        continue;
+      }
+
+      const delivery = await deliverProfile(service, link.order_id, supplierId, link.supplier_is_full === true, matched, null);
+      if (delivery.delivered) {
+        delivered++;
+      } else {
+        await recordPoll(service, link.order_id, "pending", result.status, matched?.profileName || null, expiryAt, delivery.reason, nextPollSeconds(attempts));
+      }
+    }
+  }
+
+  return { ok: true, checked, delivered, pending: pending.length };
+}
+
+Deno.serve(async (req: Request) => {
+  try {
+    if (req.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+    const service = createServiceClient();
+    if (!(await authenticateInternal(req, service))) return json({ ok: false, error: "Unauthorized" }, 401);
+
+    const body = await req.json().catch(() => ({}));
+    const action = String(body?.action || "");
+
+    if (action === "process_order") {
+      const orderId = String(body?.orderId || "").trim();
+      if (!orderId) return json({ ok: false, error: "orderId is required" }, 400);
+      const result = await processOrder(service, orderId);
+      return json(result);
+    }
+
+    if (action === "poll_pending") {
+      const result = await pollPending(service);
+      return json(result);
+    }
+
+    return json({ ok: false, error: "Unknown action" }, 400);
+  } catch (error) {
+    console.error("[SHAHID_WORKER]", error instanceof Error ? error.message : "Unexpected error");
+    return json({ ok: false, error: "Shahid worker failed safely" }, 500);
+  }
+});

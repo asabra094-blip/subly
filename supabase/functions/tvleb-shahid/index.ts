@@ -68,6 +68,12 @@ async function supplierConfig(service: any) {
   };
 }
 
+async function supplierApiKey(service: any) {
+  const { data, error } = await service.rpc("get_tvleb_shahid_api_key");
+  if (error) throw error;
+  return String(data || "").trim();
+}
+
 async function supplierGet(baseUrl: string, path: string, apiKey: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -165,7 +171,7 @@ Deno.serve(async (req: Request) => {
     if ("error" in auth) return auth.error;
     const { service } = auth;
     const config = await supplierConfig(service);
-    const apiKey = Deno.env.get("TVLEB_SHAHID_API_KEY") || "";
+    const apiKey = await supplierApiKey(service);
 
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || "status");

@@ -82,6 +82,10 @@
       .order('created_at',{ascending:false})
       .range(from,to);
     if(renewalFilter!=='all')q=q.eq('status',renewalFilter);
+    try{
+      const shahidIds=typeof getShahidProductIds==='function'?await getShahidProductIds():[];
+      for(const id of shahidIds)q=q.neq('renewal_product_id',id);
+    }catch(e){console.error('[SUBLY] Shahid renewal separation',e);c.innerHTML='<div class="empty">Could not separate Shahid renewals safely.</div>';return}
 
     const{data,error,count}=await q;
     if(error){c.innerHTML=`<div class="empty">${escapeHtml(error.message||'Could not load renewals.')}</div>`;return}
@@ -102,6 +106,7 @@
       uids.length?supabaseClient.from('profiles').select('id,username,business_name').in('id',uids):Promise.resolve({data:[]}),
       pids.length?supabaseClient.from('products').select('id,app_name,account_type,duration,logo_url').in('id',pids):Promise.resolve({data:[]})
     ]);
+    if(rr.error||pr.error){const e=rr.error||pr.error;c.innerHTML=`<div class="empty">${escapeHtml(e.message||'Could not load renewal details.')}</div>`;return}
     const profiles=rr.data||[],products=pr.data||[];
     c.innerHTML=rows.map(x=>{
       const r=profiles.find(v=>v.id===x.user_id)||{},p=products.find(v=>v.id===x.renewal_product_id)||{};

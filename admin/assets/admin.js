@@ -104,3 +104,29 @@ async function loadDashboard(){const resellerEl=document.getElementById('reselle
 window.addEventListener('resize',()=>{if(innerWidth>900)closeMobileMenu()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMobileMenu()});
 window.addEventListener('load',checkAdmin);
+
+/* Global Shahid automation danger indicator. It is read-only and visible on every admin page. */
+(function installShahidAdminNavAlert(){
+  const style=document.createElement('style');style.id='subly-shahid-nav-alert-style';style.textContent=`.subly-shahid-nav-alert{display:none;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:auto;border-radius:999px;background:#ff536a;color:#fff;font-size:9px;font-weight:950;box-shadow:0 0 0 2px rgba(255,83,106,.13)}.subly-shahid-nav-alert.show{display:inline-grid}.nav-btn.shahid-alerting{border-color:rgba(255,83,106,.28)!important}.nav-btn.shahid-alerting .nav-text{color:#fff}`;document.head.appendChild(style);
+  let timer=null;
+  function ensureBadge(){
+    const link=[...document.querySelectorAll('.nav a.nav-btn')].find(a=>{const h=a.getAttribute('href')||'';return h==='orders.html'||h.endsWith('/orders.html')});
+    if(!link)return null;
+    let badge=link.querySelector('.subly-shahid-nav-alert');
+    if(!badge){badge=document.createElement('span');badge.className='subly-shahid-nav-alert';badge.setAttribute('aria-label','Shahid automation alerts');link.appendChild(badge)}
+    return{link,badge};
+  }
+  async function refresh(){
+    if(!currentAdminUser)return;
+    const ui=ensureBadge();if(!ui)return;
+    try{
+      const{data,error}=await supabaseClient.rpc('admin_get_tvleb_shahid_alert_summary');if(error)throw error;
+      const open=Number(data?.openIncidents||0),unknown=Number(data?.unknownPurchases||0),count=Math.max(open,unknown);
+      ui.badge.textContent=count>99?'99+':String(count);
+      ui.badge.classList.toggle('show',count>0);ui.link.classList.toggle('shahid-alerting',count>0);
+      ui.link.title=count>0?`${count} Shahid automation alert${count===1?'':'s'} — open Orders → Shahid`:'Orders';
+    }catch(e){console.warn('[SUBLY] Shahid admin alert badge',e?.message||e)}
+  }
+  window.loadShahidAdminNavAlert=refresh;
+  window.addEventListener('subly:admin-ready',()=>{refresh();if(!timer)timer=setInterval(refresh,60000)});
+})();

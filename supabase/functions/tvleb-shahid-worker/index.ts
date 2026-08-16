@@ -501,6 +501,29 @@ async function processOrder(service: any, orderId: string) {
     );
   }
 
+  const prebuyMetadata = {
+    routing: "reseller_phone_fifo_v3",
+    resellerId: String(claim.resellerId || ""),
+    resellerPhone: phone,
+    orderNumber: Number(claim.orderNumber || 0) || null,
+    supplierType,
+    isFull,
+    baselineCapturedAt: new Date().toISOString(),
+    profileBaseline: baseline.rows,
+  };
+  const { error: prebuyError } = await service.rpc("store_tvleb_shahid_prebuy_context", {
+    p_order_id: orderId,
+    p_metadata: prebuyMetadata,
+  });
+  if (prebuyError) {
+    return safeRefund(
+      service,
+      orderId,
+      `Could not store Shahid pre-purchase safety context: ${shortMessage(prebuyError.message)}`,
+      "prebuy_context_store_failed",
+    );
+  }
+
   const { error: startedError } = await service.rpc("mark_tvleb_shahid_purchase_started", { p_order_id: orderId });
   if (startedError) throw startedError;
 
@@ -548,12 +571,7 @@ async function processOrder(service: any, orderId: string) {
   const profileName = String(purchased?.profileName || "").trim() || null;
   const expectedEmail = String(purchased?.email || "").trim() || null;
   const metadata = {
-    routing: "reseller_phone_fifo_v2",
-    resellerId: String(claim.resellerId || ""),
-    resellerPhone: phone,
-    orderNumber: Number(claim.orderNumber || 0) || null,
-    baselineCapturedAt: new Date().toISOString(),
-    profileBaseline: baseline.rows,
+    ...prebuyMetadata,
     expectedProfileName: profileName,
     expectedEmail,
   };

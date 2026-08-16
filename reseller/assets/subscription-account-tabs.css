@@ -1,0 +1,10 @@
+/* Subly subscription account-type tabs — keeps 1 User / Full Account subscriptions separated inside each service. */
+.sub-account-tabs{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:2px 0 10px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sub-account-tab{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:7px 12px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.035);color:var(--muted,#a6a2b4);font:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:border-color .16s ease,background .16s ease,color .16s ease,transform .16s ease}
+.sub-account-tab:hover{border-color:rgba(139,92,255,.4);color:var(--text,#fff)}
+.sub-account-tab.active{border-color:rgba(139,92,255,.58);background:rgba(139,92,255,.15);color:#fff;box-shadow:0 8px 24px rgba(96,72,180,.12)}
+.sub-account-tab:active{transform:translateY(1px)}
+.sub-account-tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.07);font-size:11px;font-weight:900;color:inherit}
+.sub-account-tab.active .sub-account-tab-count{background:rgba(255,255,255,.12)}
+.sub-account-loading{grid-column:1/-1;min-height:84px;display:flex;align-items:center;justify-content:center;color:var(--muted,#a6a2b4);font-weight:750}
+@media(max-width:560px){.sub-account-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.sub-account-tabs.single{grid-template-columns:1fr}.sub-account-tab{width:100%;min-width:0;padding-inline:9px}.sub-account-tab-count{min-width:20px;height:20px}}

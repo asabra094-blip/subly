@@ -8,7 +8,8 @@ Internal server-side worker for Subly's Shahid supplier integration.
 - `supplier_integrations.enabled` and `supplier_integrations.live_purchase_enabled` must both be `true`.
 - The selected Shahid product mapping must also be enabled.
 - A database purchase guard allows only one supplier purchase attempt per Subly order.
-- Once a POST `/buy` request has started, network timeouts / HTTP 5xx are treated as **ambiguous** and are never auto-retried or auto-refunded.
+- A worker claim that dies while still in the **pre-purchase** `preparing` state can be recovered after a five-minute lease. This is safe because `/buy` has not started yet.
+- Once the guard reaches `in_progress`, `/buy` may have started. Network timeouts / HTTP 5xx are then treated as **ambiguous** and are never auto-retried or auto-refunded.
 - An ambiguous purchase freezes that reseller's Shahid queue until an admin resolves the uncertain order.
 - Definite pre-purchase or supplier rejection errors can refund the reseller wallet atomically and then release the next queued order.
 - Supplier cost is checked with the read-only `/types` endpoint before buying. An unexpected cost increase blocks and refunds the Subly order instead of buying at a loss.

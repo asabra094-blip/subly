@@ -3,6 +3,7 @@
   'use strict';
 
   const WHISH_NUMBER='76 408 625';
+  const WHISH_NUMBER_COPY=WHISH_NUMBER.replace(/\s+/g,'');
 
   function syncWhishDestination(){
     document.querySelectorAll('[data-whish-number]').forEach(el=>{el.textContent=WHISH_NUMBER});
@@ -13,10 +14,10 @@
 
   window.copyWhishNumber=async function(button){
     try{
-      await navigator.clipboard.writeText(WHISH_NUMBER);
+      await navigator.clipboard.writeText(WHISH_NUMBER_COPY);
     }catch{
       const t=document.createElement('textarea');
-      t.value=WHISH_NUMBER;
+      t.value=WHISH_NUMBER_COPY;
       t.style.position='fixed';
       t.style.opacity='0';
       document.body.appendChild(t);

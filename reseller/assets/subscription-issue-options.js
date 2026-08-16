@@ -31,8 +31,8 @@
 
   function optionsFor(order){
     const app=String(order?.app_name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-    const account=String(order?.account_type||'').toLowerCase();
-    if(app==='netflix'&&!account.includes('full'))return netflixOneUser;
+    const account=String(order?.account_type||'Standard').trim().toLowerCase();
+    if(app==='netflix'&&account==='1 user')return netflixOneUser;
     if(app==='shahid')return shahid;
     return standard;
   }

@@ -14,6 +14,9 @@
     script.id='subly-subscription-account-tabs-js';
     script.src='/reseller/assets/subscription-account-tabs.js?v=20260816-1';
     script.async=false;
+    script.addEventListener('load',()=>{
+      if(document.readyState==='complete'&&typeof currentUser!=='undefined'&&currentUser&&typeof loadSubscriptionsPage==='function')loadSubscriptionsPage();
+    });
     document.head.appendChild(script);
   }
 

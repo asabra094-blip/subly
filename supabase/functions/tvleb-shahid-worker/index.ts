@@ -5,6 +5,8 @@ const PROVIDER = "tvleb_shahid";
 const SECRET_NAME = "subly_shahid_worker_secret";
 const DEFAULT_BASE_URL = "https://shahid.tvleb.com";
 const MAX_PENDING_BATCH = 15;
+const BASELINE_PAGE_SIZE = 50;
+const BASELINE_MAX_PAGES = 10;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -28,6 +30,9 @@ const validFutureIso = (value: unknown) => {
   const d = new Date(String(value ?? ""));
   return Number.isFinite(d.getTime()) && d.getTime() > Date.now() ? d.toISOString() : null;
 };
+const normText = (value: unknown) => String(value ?? "").trim().toLowerCase();
+const profileFingerprint = (supplierId: unknown, row: any) =>
+  [String(supplierId ?? row?.id ?? "").trim(), normText(row?.profileName), normText(row?.email), row?.isFull === true ? "full" : "user"].join("|");
 
 function createServiceClient() {
   const url = Deno.env.get("SUPABASE_URL");
@@ -199,9 +204,106 @@ function responseStatus(data: any) {
   return "active";
 }
 
-function findCustomerProfile(rows: any[], phone: string) {
+type BaselineRow = {
+  id: string;
+  profileName: string | null;
+  email: string | null;
+  isFull: boolean;
+};
+
+type BaselineResult = {
+  ok: boolean;
+  rows: BaselineRow[];
+  status: number | null;
+  message: string | null;
+  truncated: boolean;
+};
+
+async function captureProfileBaseline(baseUrl: string, apiKey: string, phone: string): Promise<BaselineResult> {
   const wanted = normalizedPhone(phone);
-  return rows.find((row: any) => normalizedPhone(row?.phoneNumber) === wanted) || null;
+  const rows: BaselineRow[] = [];
+
+  for (let page = 1; page <= BASELINE_MAX_PAGES; page++) {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(BASELINE_PAGE_SIZE),
+      searchKey: wanted,
+    });
+    const result = await supplierRequest(baseUrl, apiKey, "GET", `/api/v1/shahid/subscriptions?${params.toString()}`);
+    if (result.networkError || result.status !== 200 || result.body?.success !== true) {
+      return {
+        ok: false,
+        rows: [],
+        status: result.status,
+        message: shortMessage(result.body?.message || result.error || "Could not capture existing Shahid profiles before purchase"),
+        truncated: false,
+      };
+    }
+
+    const pageRows = Array.isArray(result.body?.data?.subscriptions) ? result.body.data.subscriptions : [];
+    for (const row of pageRows) {
+      if (normalizedPhone(row?.phoneNumber) !== wanted) continue;
+      rows.push({
+        id: String(row?.id || "").trim(),
+        profileName: String(row?.profileName || "").trim() || null,
+        email: String(row?.email || "").trim() || null,
+        isFull: row?.isFull === true,
+      });
+    }
+
+    if (pageRows.length < BASELINE_PAGE_SIZE) {
+      return { ok: true, rows, status: result.status, message: null, truncated: false };
+    }
+  }
+
+  return {
+    ok: false,
+    rows,
+    status: 200,
+    message: "Too many existing Shahid subscriptions were returned to build a safe purchase baseline",
+    truncated: true,
+  };
+}
+
+function chooseCustomerProfile(
+  rows: any[],
+  phone: string,
+  supplierId: string,
+  metadata: any,
+  isFull: boolean,
+) {
+  const wanted = normalizedPhone(phone);
+  const candidates = rows.filter((row: any) => normalizedPhone(row?.phoneNumber) === wanted);
+  if (!candidates.length) return { match: null, reason: "reseller_phone_not_visible" };
+
+  const expectedProfileName = normText(metadata?.expectedProfileName);
+  const expectedEmail = normText(metadata?.expectedEmail);
+
+  if (expectedProfileName || expectedEmail) {
+    const exact = candidates.filter((row: any) => {
+      if (expectedProfileName && normText(row?.profileName) !== expectedProfileName) return false;
+      if (expectedEmail && normText(row?.email) !== expectedEmail) return false;
+      return true;
+    });
+    if (exact.length === 1) return { match: exact[0], reason: "purchase_response_match" };
+  }
+
+  const baselineRows = Array.isArray(metadata?.profileBaseline) ? metadata.profileBaseline : [];
+  const baselineForAccount = new Set(
+    baselineRows
+      .filter((row: any) => String(row?.id || "").trim() === supplierId)
+      .map((row: any) => profileFingerprint(supplierId, row)),
+  );
+  const newCandidates = candidates.filter((row: any) => !baselineForAccount.has(profileFingerprint(supplierId, row)));
+
+  if (newCandidates.length === 1) return { match: newCandidates[0], reason: "new_profile_since_baseline" };
+  if (isFull && candidates.length === 1) return { match: candidates[0], reason: "single_full_account_match" };
+  if (candidates.length === 1 && baselineForAccount.size === 0) return { match: candidates[0], reason: "single_first_profile_match" };
+
+  return {
+    match: null,
+    reason: newCandidates.length > 1 ? "multiple_new_profiles_visible" : "profile_not_uniquely_identifiable_yet",
+  };
 }
 
 function nextPollSeconds(attempts: number) {
@@ -273,6 +375,7 @@ async function resolveAfterPurchase(
   customerPhone: string,
   isFull: boolean,
   supplierPrice: number | null,
+  metadata: any,
 ) {
   const result = await supplierRequest(
     baseUrl,
@@ -300,10 +403,11 @@ async function resolveAfterPurchase(
     return { delivered: false, pending: true, reason: "status_check_not_ready" };
   }
 
-  const matched = findCustomerProfile(result.body.data, customerPhone);
+  const choice = chooseCustomerProfile(result.body.data, customerPhone, supplierId, metadata, isFull);
+  const matched = choice.match;
   if (!matched) {
-    await recordPoll(service, orderId, "pending", result.status, null, null, "Customer profile not visible yet", 60);
-    return { delivered: false, pending: true, reason: "customer_profile_not_visible" };
+    await recordPoll(service, orderId, "pending", result.status, null, null, choice.reason, 60);
+    return { delivered: false, pending: true, reason: choice.reason };
   }
 
   const status = String(matched?.status || "pending").toLowerCase();
@@ -327,23 +431,21 @@ async function resolveAfterPurchase(
   return delivery;
 }
 
-async function customerExistsAtSupplier(baseUrl: string, apiKey: string, phone: string) {
-  const params = new URLSearchParams({ page: "1", pageSize: "20", searchKey: phone });
-  const result = await supplierRequest(baseUrl, apiKey, "GET", `/api/v1/shahid/subscriptions?${params.toString()}`);
-  if (result.networkError || result.status !== 200 || result.body?.success !== true) {
-    return { ok: false, exists: false, status: result.status, message: shortMessage(result.body?.message || result.error || "Could not verify existing supplier customer") };
-  }
-  const rows = Array.isArray(result.body?.data?.subscriptions) ? result.body.data.subscriptions : [];
-  const exists = rows.some((row: any) => normalizedPhone(row?.phoneNumber) === normalizedPhone(phone));
-  return { ok: true, exists, status: result.status, message: null };
-}
-
 async function processOrder(service: any, orderId: string) {
   const { data: claim, error: claimError } = await service.rpc("claim_tvleb_shahid_purchase", {
     p_order_id: orderId,
   });
   if (claimError) throw claimError;
-  if (!claim?.claimed) return { ok: true, action: "noop", reason: claim?.reason || "not_claimed", state: claim?.state || null };
+  if (!claim?.claimed) {
+    return {
+      ok: true,
+      action: claim?.reason === "queued_behind_reseller_shahid_order" ? "queued" : "noop",
+      reason: claim?.reason || "not_claimed",
+      queuePosition: claim?.queuePosition || null,
+      blockingSubscriptionCode: claim?.blockingSubscriptionCode || null,
+      state: claim?.state || claim?.blockingGuardState || null,
+    };
+  }
 
   const config = await supplierConfig(service);
   const apiKey = await supplierApiKey(service);
@@ -357,18 +459,8 @@ async function processOrder(service: any, orderId: string) {
   const resellerPrice = Number(claim.resellerPrice);
 
   if (!apiKey) return safeRefund(service, orderId, "Shahid API key is not configured", "api_key_missing");
-  if (phone.length < 10) return safeRefund(service, orderId, "Customer phone number is invalid for the Shahid supplier", "invalid_customer_phone");
-  if (!firstName) return safeRefund(service, orderId, "Customer first name is required for Shahid automation", "customer_first_name_required");
-
-  if (!lastName) {
-    const existing = await customerExistsAtSupplier(baseUrl, apiKey, phone);
-    if (!existing.ok) {
-      return safeRefund(service, orderId, existing.message || "Could not verify supplier customer", "customer_preflight_failed", existing.status);
-    }
-    if (!existing.exists) {
-      return safeRefund(service, orderId, "Customer last name is required for a new Shahid supplier customer", "customer_last_name_required");
-    }
-  }
+  if (phone.length < 10) return safeRefund(service, orderId, "Reseller phone number is invalid for the Shahid supplier", "invalid_reseller_phone");
+  if (!firstName || !lastName) return safeRefund(service, orderId, "Reseller name is incomplete for the Shahid supplier", "reseller_name_required");
 
   const typeResult = await supplierRequest(baseUrl, apiKey, "GET", "/api/v1/shahid/types");
   if (typeResult.networkError || typeResult.status !== 200 || typeResult.body?.success !== true) {
@@ -398,6 +490,17 @@ async function processOrder(service: any, orderId: string) {
     return safeRefund(service, orderId, "Supplier cost is higher than the reseller sale price; purchase blocked", "negative_margin_blocked", typeResult.status);
   }
 
+  const baseline = await captureProfileBaseline(baseUrl, apiKey, phone);
+  if (!baseline.ok) {
+    return safeRefund(
+      service,
+      orderId,
+      baseline.message || "Could not capture a safe Shahid profile baseline before purchase",
+      baseline.truncated ? "profile_baseline_too_large" : "profile_baseline_failed",
+      baseline.status,
+    );
+  }
+
   const { error: startedError } = await service.rpc("mark_tvleb_shahid_purchase_started", { p_order_id: orderId });
   if (startedError) throw startedError;
 
@@ -405,9 +508,9 @@ async function processOrder(service: any, orderId: string) {
     type: supplierType,
     customerPhone: phone,
     isFull,
+    customerFirstName: firstName,
+    customerLastName: lastName,
   };
-  if (firstName) buyPayload.customerFirstName = firstName;
-  if (lastName) buyPayload.customerLastName = lastName;
   if (phone.startsWith("961")) buyPayload.countryCode = "lb";
 
   const purchase = await supplierRequest(baseUrl, apiKey, "POST", "/api/v1/shahid/buy", buyPayload, 15000);
@@ -443,8 +546,19 @@ async function processOrder(service: any, orderId: string) {
   const supplierPrice = Number.isFinite(supplierPriceValue) ? supplierPriceValue : liveSupplierCost;
   const supplierExpiry = validFutureIso(purchased?.expiryDate);
   const profileName = String(purchased?.profileName || "").trim() || null;
+  const expectedEmail = String(purchased?.email || "").trim() || null;
+  const metadata = {
+    routing: "reseller_phone_fifo_v2",
+    resellerId: String(claim.resellerId || ""),
+    resellerPhone: phone,
+    orderNumber: Number(claim.orderNumber || 0) || null,
+    baselineCapturedAt: new Date().toISOString(),
+    profileBaseline: baseline.rows,
+    expectedProfileName: profileName,
+    expectedEmail,
+  };
 
-  const { error: recordError } = await service.rpc("record_tvleb_shahid_purchase_success", {
+  const { error: recordError } = await service.rpc("record_tvleb_shahid_purchase_success_v2", {
     p_order_id: orderId,
     p_supplier_subscription_id: supplierId,
     p_supplier_status: supplierStatus,
@@ -455,14 +569,18 @@ async function processOrder(service: any, orderId: string) {
     p_supplier_profile_name: profileName,
     p_http_status: purchase.status,
     p_message: shortMessage(purchase.body?.message || "Purchase accepted"),
+    p_metadata: metadata,
   });
-  if (recordError) throw recordError;
+  if (recordError) {
+    await markAmbiguous(service, orderId, `Supplier purchase succeeded but Subly could not record its link: ${shortMessage(recordError.message)}`, purchase.status);
+    return { ok: false, ambiguous: true, automaticRetry: false };
+  }
 
   if (supplierStatus === "pending") {
     return { ok: true, purchased: true, pending: true, supplierId };
   }
 
-  return await resolveAfterPurchase(service, baseUrl, apiKey, orderId, supplierId, phone, isFull, supplierPrice);
+  return await resolveAfterPurchase(service, baseUrl, apiKey, orderId, supplierId, phone, isFull, supplierPrice, metadata);
 }
 
 async function pollPending(service: any) {
@@ -505,11 +623,25 @@ async function pollPending(service: any) {
 
     for (const link of group) {
       const attempts = Number(link?.check_attempts || 0);
-      const matched = findCustomerProfile(result.body.data, link.customer_phone);
+      const choice = chooseCustomerProfile(
+        result.body.data,
+        link.customer_phone,
+        supplierId,
+        link.metadata || {},
+        link.supplier_is_full === true,
+      );
+      const matched = choice.match;
       if (!matched) {
-        await recordPoll(service, link.order_id, "pending", result.status, null, null, "Customer profile not visible yet", nextPollSeconds(attempts));
+        await recordPoll(service, link.order_id, "pending", result.status, null, null, choice.reason, nextPollSeconds(attempts));
         if (attempts === 9) {
-          await addIncident(service, link.order_id, "warning", "pending_profile_not_visible", "Supplier account exists but this customer's Shahid profile is still not visible.", { supplierId });
+          await addIncident(
+            service,
+            link.order_id,
+            "warning",
+            "pending_profile_not_unique",
+            "Supplier account is visible, but Subly is still waiting for the uniquely identifiable Shahid profile for this queued order.",
+            { supplierId, matchReason: choice.reason },
+          );
         }
         continue;
       }

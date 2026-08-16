@@ -12,6 +12,13 @@ const json = (body: unknown, status = 200) =>
   });
 
 const cleanDigits = (value: unknown) => String(value ?? "").replace(/\D/g, "");
+const supplierPhone = (value: unknown) => {
+  const digits = cleanDigits(value);
+  if (digits.startsWith("961")) return digits;
+  if (digits.startsWith("0") && digits.length >= 8) return `961${digits.slice(1)}`;
+  if (digits.length === 8) return `961${digits}`;
+  return digits;
+};
 
 async function requireAdmin(req: Request) {
   const url = Deno.env.get("SUPABASE_URL");
@@ -45,7 +52,7 @@ async function requireAdmin(req: Request) {
   return { service, user };
 }
 
-async function supplierConfig(service: ReturnType<typeof createClient>) {
+async function supplierConfig(service: any) {
   const { data, error } = await service
     .from("supplier_integrations")
     .select("provider,display_name,base_url,enabled,live_purchase_enabled")
@@ -104,6 +111,52 @@ function validateMockBuy(payload: Record<string, unknown>) {
   };
 }
 
+async function buildPreview(service: any, productId: string, customerId: string) {
+  if (!productId || !customerId) return { error: "productId and customerId are required" };
+
+  const [{ data: product, error: productError }, { data: customer, error: customerError }, { data: mapping, error: mappingError }] = await Promise.all([
+    service.from("products").select("id,app_name,account_type,duration,active").eq("id", productId).maybeSingle(),
+    service.from("customers").select("id,first_name,last_name,phone,status").eq("id", customerId).maybeSingle(),
+    service.from("supplier_product_mappings").select("supplier_type,supplier_is_full,enabled").eq("provider", PROVIDER).eq("product_id", productId).maybeSingle(),
+  ]);
+
+  if (productError) throw productError;
+  if (customerError) throw customerError;
+  if (mappingError) throw mappingError;
+  if (!product || !mapping) return { error: "This product is not mapped to TV Leb Shahid" };
+  if (!customer) return { error: "Customer not found" };
+  if (String(product.app_name || "").trim().toLowerCase() !== "shahid") return { error: "Only Shahid products are supported" };
+
+  const phone = supplierPhone(customer.phone);
+  const payload = {
+    type: mapping.supplier_type,
+    customerPhone: phone,
+    isFull: mapping.supplier_is_full === true,
+    customerFirstName: String(customer.first_name || "").trim(),
+    customerLastName: String(customer.last_name || "").trim(),
+    countryCode: "lb",
+  };
+  const validation = validateMockBuy(payload);
+  if (validation.error) return { error: validation.error, payload, mappingEnabled: mapping.enabled === true };
+
+  return {
+    payload: validation.value,
+    product: {
+      id: product.id,
+      appName: product.app_name,
+      accountType: product.account_type,
+      duration: product.duration,
+      active: product.active === true,
+    },
+    customer: {
+      id: customer.id,
+      status: customer.status,
+      originalPhone: customer.phone,
+    },
+    mappingEnabled: mapping.enabled === true,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   try {
     if (req.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
@@ -133,6 +186,12 @@ Deno.serve(async (req: Request) => {
       if (!apiKey) return json({ ok: false, error: "TV Leb Shahid API key is not configured" }, 503);
       const result = await supplierGet(config.base_url || DEFAULT_BASE_URL, "/api/v1/shahid/types", apiKey);
       return json({ ok: result.status >= 200 && result.status < 300, supplierStatus: result.status, supplier: result.body }, result.status);
+    }
+
+    if (action === "preview") {
+      const preview = await buildPreview(service, String(body?.productId || ""), String(body?.customerId || ""));
+      if (preview.error) return json({ ok: false, supplierCalled: false, ...preview }, 400);
+      return json({ ok: true, supplierCalled: false, ...preview });
     }
 
     if (action === "mock_buy") {

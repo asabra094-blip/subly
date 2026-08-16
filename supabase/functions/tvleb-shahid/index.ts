@@ -4,11 +4,29 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const PROVIDER = "tvleb_shahid";
 const DEFAULT_BASE_URL = "https://shahid.tvleb.com";
 const ALLOWED_TYPES = new Set(["1-month", "3-month", "1-year"]);
+const ALLOWED_ORIGINS = new Set([
+  "https://sublylb.com",
+  "https://www.sublylb.com",
+]);
 
-const json = (body: unknown, status = 200) =>
+const corsHeaders = (req: Request) => {
+  const origin = req.headers.get("origin") || "";
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "https://www.sublylb.com",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+  };
+};
+
+const json = (req: Request, body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      ...corsHeaders(req),
+      "content-type": "application/json; charset=utf-8",
+    },
   });
 
 const cleanDigits = (value: unknown) => String(value ?? "").replace(/\D/g, "");
@@ -27,7 +45,7 @@ async function requireAdmin(req: Request) {
   if (!url || !anon || !serviceRole) throw new Error("Supabase environment is incomplete");
 
   const authorization = req.headers.get("authorization") || "";
-  if (!authorization) return { error: json({ ok: false, error: "Unauthorized" }, 401) };
+  if (!authorization) return { error: json(req, { ok: false, error: "Unauthorized" }, 401) };
 
   const userClient = createClient(url, anon, {
     global: { headers: { Authorization: authorization } },
@@ -35,7 +53,7 @@ async function requireAdmin(req: Request) {
   });
   const { data: userData, error: userError } = await userClient.auth.getUser();
   const user = userData?.user;
-  if (userError || !user) return { error: json({ ok: false, error: "Unauthorized" }, 401) };
+  if (userError || !user) return { error: json(req, { ok: false, error: "Unauthorized" }, 401) };
 
   const service = createClient(url, serviceRole, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -47,7 +65,7 @@ async function requireAdmin(req: Request) {
     .maybeSingle();
 
   if (profileError || !profile || profile.role !== "admin" || profile.status !== "active") {
-    return { error: json({ ok: false, error: "Admin access required" }, 403) };
+    return { error: json(req, { ok: false, error: "Admin access required" }, 403) };
   }
   return { service, user };
 }
@@ -165,7 +183,10 @@ async function buildPreview(service: any, productId: string, customerId: string)
 
 Deno.serve(async (req: Request) => {
   try {
-    if (req.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders(req) });
+    }
+    if (req.method !== "POST") return json(req, { ok: false, error: "Method not allowed" }, 405);
 
     const auth = await requireAdmin(req);
     if ("error" in auth) return auth.error;
@@ -177,7 +198,7 @@ Deno.serve(async (req: Request) => {
     const action = String(body?.action || "status");
 
     if (action === "status") {
-      return json({
+      return json(req, {
         ok: true,
         provider: PROVIDER,
         configured: Boolean(apiKey),
@@ -189,24 +210,24 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "types") {
-      if (!apiKey) return json({ ok: false, error: "TV Leb Shahid API key is not configured" }, 503);
+      if (!apiKey) return json(req, { ok: false, error: "TV Leb Shahid API key is not configured" }, 503);
       const result = await supplierGet(config.base_url || DEFAULT_BASE_URL, "/api/v1/shahid/types", apiKey);
-      return json({ ok: result.status >= 200 && result.status < 300, supplierStatus: result.status, supplier: result.body }, result.status);
+      return json(req, { ok: result.status >= 200 && result.status < 300, supplierStatus: result.status, supplier: result.body }, result.status);
     }
 
     if (action === "preview") {
       const preview = await buildPreview(service, String(body?.productId || ""), String(body?.customerId || ""));
-      if (preview.error) return json({ ok: false, supplierCalled: false, ...preview }, 400);
-      return json({ ok: true, supplierCalled: false, ...preview });
+      if (preview.error) return json(req, { ok: false, supplierCalled: false, ...preview }, 400);
+      return json(req, { ok: true, supplierCalled: false, ...preview });
     }
 
     if (action === "mock_buy") {
       const check = validateMockBuy(body?.payload || {});
-      if (check.error) return json({ ok: false, mock: true, supplierCalled: false, error: check.error }, 400);
+      if (check.error) return json(req, { ok: false, mock: true, supplierCalled: false, error: check.error }, 400);
       const scenario = body?.scenario === "pending" ? "pending" : "active";
       const v = check.value!;
       const id = "mock-tvleb-shahid-account";
-      return json({
+      return json(req, {
         ok: true,
         mock: true,
         supplierCalled: false,
@@ -235,16 +256,16 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "buy") {
-      return json({
+      return json(req, {
         ok: false,
         supplierCalled: false,
         error: "Live Shahid purchases are intentionally disabled during the safe foundation phase",
       }, 423);
     }
 
-    return json({ ok: false, error: "Unknown action" }, 400);
+    return json(req, { ok: false, error: "Unknown action" }, 400);
   } catch (error) {
     console.error("[TVLEB_SHAHID]", error);
-    return json({ ok: false, error: error instanceof Error ? error.message : "Unexpected error" }, 500);
+    return json(req, { ok: false, error: error instanceof Error ? error.message : "Unexpected error" }, 500);
   }
 });

@@ -12,7 +12,10 @@ Internal server-side worker for Subly's Shahid supplier integration.
 - Once the guard reaches `in_progress`, `/buy` may have started. Network timeouts / HTTP 5xx are then treated as **ambiguous** and are never auto-retried or auto-refunded.
 - An ambiguous purchase freezes that reseller's Shahid queue until an admin resolves the uncertain order.
 - Definite pre-purchase or supplier rejection errors can refund the reseller wallet atomically and then release the next queued order.
-- Supplier cost is checked with the read-only `/types` endpoint before buying. An unexpected cost increase blocks and refunds the Subly order instead of buying at a loss.
+- Supplier package data and cost are checked with the read-only `/types` endpoint before buying. An unexpected cost increase blocks and refunds the Subly order instead of buying at a loss.
+- Product mappings keep a canonical duration key such as `1-month` or `3-month`; the worker does **not** send that stale key directly to `/buy`. It resolves the current non-recharge Shahid package from the supplier's live `/types` response and sends that package's current `type` value.
+- Shared/full availability from `/types` is respected, and new subscriptions explicitly prefer Shahid packages over similarly sized `Recharge` packages.
+- Supplier validation responses keep field-level details such as the failing path/schema message, so admin alerts do not collapse useful errors into only `Validation Error`.
 
 ## Reseller routing
 
@@ -42,13 +45,13 @@ This is what makes a flow such as `Rashid order #1 → delivered → Rashid orde
 
 1. A new eligible Shahid order enters that reseller's FIFO queue.
 2. Only the first unresolved order is claimed by the worker.
-3. The worker validates the reseller routing phone, live package price and supplier package availability.
+3. The worker validates the reseller routing phone, reads the current supplier package list, selects the correct non-recharge Shahid package for shared/full mode, and checks its live price.
 4. The worker captures the reseller's pre-purchase Shahid profile baseline.
-5. The worker calls `/api/v1/shahid/buy` only after all safety checks pass.
+5. The worker calls `/api/v1/shahid/buy` with the supplier's current live package `type` only after all safety checks pass.
 6. The supplier subscription ID, reseller routing phone and safe matching metadata are stored.
 7. Active or pending subscriptions are resolved with `/subscription/:id` and matched using the reseller phone plus the saved baseline / expected purchase details.
 8. Pending subscriptions are polled by the one-minute cron dispatcher.
 9. When the correct profile becomes active, Subly fills the account email, password, profile and supplier expiry date, marks the order delivered, and the existing Subly notification/Telegram flow fires.
 10. Delivery releases the next Shahid order for that reseller.
 
-Live purchase flags are intentionally left disabled until a controlled real-money test is approved.
+Live purchase flags are intentionally left disabled until a controlled real-money test is armed.

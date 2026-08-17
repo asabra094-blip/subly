@@ -35,16 +35,29 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
     const incidentId = String(body?.incidentId || "").trim();
-    if (!incidentId) return new Response(JSON.stringify({ ok: false, error: "incidentId is required" }), { status: 400, headers: { "content-type": "application/json" } });
+    const event = body?.event === "resolved" ? "resolved" : "opened";
+    if (!incidentId) {
+      return new Response(JSON.stringify({ ok: false, error: "incidentId is required" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
+    }
 
     const { data: incident, error: incidentError } = await service
       .from("supplier_incidents")
-      .select("id,provider,order_id,severity,code,message,metadata,created_at")
+      .select("id,provider,order_id,severity,code,message,metadata,resolved,created_at,resolved_at")
       .eq("id", incidentId)
       .maybeSingle();
     if (incidentError) throw incidentError;
     if (!incident || incident.provider !== "tvleb_shahid") {
-      return new Response(JSON.stringify({ ok: true, ignored: true }), { headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, ignored: true }), {
+        headers: { "content-type": "application/json" },
+      });
+    }
+    if (event === "opened" && incident.resolved === true) {
+      return new Response(JSON.stringify({ ok: true, ignored: true, reason: "already_resolved" }), {
+        headers: { "content-type": "application/json" },
+      });
     }
 
     const { data: order } = incident.order_id
@@ -70,23 +83,45 @@ Deno.serve(async (req: Request) => {
     const reseller: any = resellerResult.data;
     const product: any = productResult.data;
     const customer: any = customerResult.data;
-    const severityIcon = incident.severity === "critical" ? "🚨" : incident.severity === "warning" ? "⚠️" : "ℹ️";
     const autoRetry = incident.metadata?.automaticRetry;
+    const severity = String(incident.severity || "warning").toLowerCase();
 
-    const text = `${severityIcon} <b>Shahid Automation Alert</b>\n\n` +
-      `<b>Severity:</b> ${esc(String(incident.severity || "warning").toUpperCase())}\n` +
-      `<b>Subscription ID:</b> <code>${esc(subId(order))}</code>\n` +
-      `<b>Reseller:</b> ${esc(reseller?.business_name || reseller?.username || "Unknown reseller")}\n` +
+    let headline = "⚠️ <b>HEADS UP — Shahid Automation</b>";
+    let action = "Keep an eye on this order in the Shahid Control Center.";
+    if (event === "resolved") {
+      headline = "✅ <b>RESOLVED — Shahid Automation</b>";
+      action = "No action is needed unless the order still looks wrong in the admin panel.";
+    } else if (severity === "critical") {
+      headline = "🚨 <b>CRITICAL — Shahid Needs Attention</b>";
+      action = autoRetry === false
+        ? "Do NOT retry the supplier purchase manually. Open Shahid → Needs Attention and verify the supplier state first."
+        : "Open Shahid → Needs Attention and review this order as soon as possible.";
+    }
+
+    const resellerLabel = reseller?.business_name || reseller?.username || "Unknown reseller";
+    const resellerCode = reseller?.reseller_code ? ` • ${esc(reseller.reseller_code)}` : "";
+    const statusLine = order?.status ? `\n<b>Order status:</b> ${esc(String(order.status).toUpperCase())}` : "";
+    const resolvedLine = event === "resolved" && incident.resolved_at
+      ? `\n<b>Resolved:</b> ${esc(new Date(incident.resolved_at).toLocaleString("en-GB", { timeZone: "Asia/Beirut" }))}`
+      : "";
+
+    const text = `${headline}\n\n` +
+      `<b>Subscription:</b> <code>${esc(subId(order))}</code>${statusLine}\n` +
+      `<b>Reseller:</b> ${esc(resellerLabel)}${resellerCode}\n` +
       `<b>Customer:</b> ${esc(fullName(customer) || "Unknown customer")}${customer?.phone ? ` • ${esc(customer.phone)}` : ""}\n` +
       `<b>Product:</b> ${esc(product?.app_name || "Shahid")} • ${esc(product?.account_type || "—")} • ${esc(product?.duration || "—")}\n` +
       `<b>Code:</b> <code>${esc(incident.code)}</code>\n` +
-      `<b>Details:</b> ${esc(incident.message)}` +
-      (autoRetry === false ? `\n\n<b>Safety:</b> No automatic retry was attempted. The reseller Shahid queue is protected until this is resolved.` : "");
+      `<b>Details:</b> ${esc(incident.message)}${resolvedLine}\n\n` +
+      `<b>${event === "resolved" ? "Status" : "Action"}:</b> ${esc(action)}` +
+      (event !== "resolved" && autoRetry === false
+        ? `\n\n🛡 <b>Safety lock:</b> Automatic retry is OFF for this incident. The reseller Shahid queue remains protected until the state is safely resolved.`
+        : "");
 
     const token = Deno.env.get("TELEGRAM_BOT_TOKEN") || Deno.env.get("Bottoken") || Deno.env.get("BOTTOKEN");
     const chatId = Deno.env.get("TELEGRAM_CHAT_ID") || Deno.env.get("Idtelegram") || Deno.env.get("IDTELEGRAM");
     if (!token || !chatId) throw new Error("Telegram secrets are missing");
 
+    const buttonText = event === "resolved" ? "Review Resolved Order" : "Open Shahid Control Center";
     const telegram = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -96,13 +131,15 @@ Deno.serve(async (req: Request) => {
         parse_mode: "HTML",
         disable_web_page_preview: true,
         reply_markup: {
-          inline_keyboard: [[{ text: "Open Shahid Control Center", url: ADMIN_ORDERS_URL }]],
+          inline_keyboard: [[{ text: buttonText, url: ADMIN_ORDERS_URL }]],
         },
       }),
     });
     if (!telegram.ok) throw new Error(`Telegram ${telegram.status}: ${await telegram.text()}`);
 
-    return new Response(JSON.stringify({ ok: true }), { headers: { "content-type": "application/json" } });
+    return new Response(JSON.stringify({ ok: true, event }), {
+      headers: { "content-type": "application/json" },
+    });
   } catch (error) {
     console.error("[SHAHID_ADMIN_ALERT]", error instanceof Error ? error.message : "Unexpected error");
     return new Response(JSON.stringify({ ok: false, error: "Shahid alert failed" }), {

@@ -279,6 +279,7 @@ async function processOrder(service: any, orderId: string) {
   if (typeResult.networkError || typeResult.status !== 200 || typeResult.body?.success !== true) return safeRefund(service, orderId, supplierErrorMessage(typeResult.body, typeResult.error || "Could not verify Shahid package before purchase"), "package_preflight_failed", typeResult.status);
   const livePackage = packageFromTypes(typeResult.body, supplierType, isFull);
   if (!livePackage) return safeRefund(service, orderId, "The selected Shahid package is not available from the supplier", "supplier_package_unavailable", typeResult.status);
+  if (!livePackage.sourceId) return safeRefund(service, orderId, "The supplier package has no typeId; purchase was blocked before spending balance", "supplier_type_id_missing", typeResult.status);
   const liveSupplierCost = livePackage.price;
   if (Number.isFinite(storedSupplierCost) && storedSupplierCost > 0 && liveSupplierCost > storedSupplierCost + 0.01) return safeRefund(service, orderId, `Supplier cost changed from ${storedSupplierCost.toFixed(2)} to ${liveSupplierCost.toFixed(2)}; purchase blocked`, "supplier_price_increased", typeResult.status);
   if (Number.isFinite(resellerPrice) && liveSupplierCost > resellerPrice) return safeRefund(service, orderId, "Supplier cost is higher than the reseller sale price; purchase blocked", "negative_margin_blocked", typeResult.status);
@@ -287,7 +288,7 @@ async function processOrder(service: any, orderId: string) {
   if (!baseline.ok) return safeRefund(service, orderId, baseline.message || "Could not capture a safe Shahid profile baseline before purchase", baseline.truncated ? "profile_baseline_too_large" : "profile_baseline_failed", baseline.status);
 
   const prebuyMetadata = {
-    routing: "reseller_phone_fifo_v4",
+    routing: "reseller_phone_fifo_v5",
     resellerId: String(claim.resellerId || ""), resellerPhone: phone, orderNumber: Number(claim.orderNumber || 0) || null,
     mappingType: supplierType, resolvedSupplierType: livePackage.apiType, resolvedSupplierTitle: livePackage.title,
     resolvedSupplierPackageId: livePackage.sourceId, isFull, baselineCapturedAt: new Date().toISOString(), profileBaseline: baseline.rows,
@@ -298,7 +299,7 @@ async function processOrder(service: any, orderId: string) {
   const { error: startedError } = await service.rpc("mark_tvleb_shahid_purchase_started", { p_order_id: orderId });
   if (startedError) throw startedError;
 
-  const buyPayload: Record<string, unknown> = { type: livePackage.apiType, customerPhone: phone, isFull, customerFirstName: firstName, customerLastName: lastName };
+  const buyPayload: Record<string, unknown> = { typeId: livePackage.sourceId, type: livePackage.apiType, customerPhone: phone, isFull, customerFirstName: firstName, customerLastName: lastName };
   const purchase = await supplierRequest(baseUrl, apiKey, "POST", "/api/v1/shahid/buy", buyPayload, 15000);
   if (purchase.networkError || purchase.status === null) {
     await markAmbiguous(service, orderId, `Network result became ambiguous after Shahid purchase started: ${shortMessage(purchase.error)}`);

@@ -8,6 +8,8 @@
   const safeDate=v=>typeof formatDateTime==='function'?formatDateTime(v):(v?new Date(v).toLocaleString():'—');
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(v):String(v??'');
   let loading=false;
+  let attentionLoading=false;
+  let attentionTimer=null;
 
   function setText(id,value){const el=qs(id);if(el)el.textContent=value}
   function setAttention(id,value,tone='warning'){
@@ -15,6 +17,35 @@
     setText(`${id}Value`,String(value));
     el.classList.remove('critical','warning','good');
     el.classList.add(value>0?tone:'good');
+  }
+  function stampLiveUpdate(){
+    setText('dashboardLastUpdated',`Live • ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`);
+  }
+  function renderAttention(c){
+    const topups=c.topups?.error?0:num(c.topups?.count);
+    const renewals=c.pendingRenewals?.error?0:num(c.pendingRenewals?.count);
+    const issues=c.openIssues?.error?0:num(c.openIssues?.count);
+    const processing=c.processing?.error?0:num(c.processing?.count);
+    const shahidOpen=c.shahid?.error?0:Math.max(num(c.shahid?.data?.openIncidents),num(c.shahid?.data?.unknownPurchases));
+    setAttention('attentionShahid',shahidOpen,'critical');
+    setAttention('attentionTopups',topups,'warning');
+    setAttention('attentionRenewals',renewals,'warning');
+    setAttention('attentionSupport',issues,'warning');
+    setAttention('attentionOrders',processing,'warning');
+    setText('attentionTotal',String(shahidOpen+topups+renewals+issues+processing));
+    if(!c.topups?.error)setText('topupCount',String(c.topups.count??0));
+    stampLiveUpdate();
+  }
+
+  async function getAttentionCounts(){
+    const [topups,pendingRenewals,openIssues,processing,shahid]=await Promise.all([
+      supabaseClient.from('topup_requests').select('id',{count:'exact',head:true}).eq('status','pending'),
+      supabaseClient.from('renewals').select('id',{count:'exact',head:true}).eq('status','pending'),
+      supabaseClient.from('subscription_issues').select('id',{count:'exact',head:true}).in('status',['open','in_progress']),
+      supabaseClient.from('orders').select('id',{count:'exact',head:true}).eq('status','processing'),
+      supabaseClient.rpc('admin_get_tvleb_shahid_alert_summary')
+    ]);
+    return{topups,pendingRenewals,openIssues,processing,shahid};
   }
 
   async function getCounts(){
@@ -50,7 +81,6 @@
     const productMap=new Map((products.data||[]).map(x=>[x.id,x]));
     const resellerName=id=>{const p=pmap.get(id)||{};return p.business_name||p.username||'Unknown reseller'};
     const items=[];
-
     for(const o of orders.data||[]){
       const app=productMap.get(o.product_id)?.app_name||'Subscription';
       items.push({time:o.delivered_at||o.created_at,sort:new Date(o.delivered_at||o.created_at||0).getTime(),icon:o.status==='delivered'?'✅':o.status==='refunded'?'↩️':'🛒',title:`${app} order ${o.status||'updated'}`,detail:`${resellerName(o.user_id)} • ${o.subscription_code||'Order'}`,amount:safeMoney(o.price_paid)});
@@ -71,6 +101,23 @@
     box.innerHTML=items.map(x=>`<div class="activity-row"><div class="activity-icon">${esc(x.icon)}</div><div><div class="activity-title">${esc(x.title)}</div><div class="activity-detail">${esc(x.detail)}</div></div><div class="activity-time">${esc(safeDate(x.time))}<span class="activity-amount">${esc(x.amount||'')}</span></div></div>`).join('');
   }
 
+  async function refreshAttention(){
+    if(attentionLoading||loading||!currentAdminUser||document.hidden)return;
+    attentionLoading=true;
+    try{
+      renderAttention(await getAttentionCounts());
+    }catch(e){
+      console.warn('[SUBLY] attention refresh',e?.message||e);
+    }finally{
+      attentionLoading=false;
+    }
+  }
+
+  function startAttentionPolling(){
+    if(attentionTimer)clearInterval(attentionTimer);
+    attentionTimer=setInterval(refreshAttention,5000);
+  }
+
   async function refreshDashboardControl(){
     if(loading||!currentAdminUser)return;
     loading=true;
@@ -80,22 +127,9 @@
       const c=countData;
       setText('resellerCount',c.resellers.error?'—':String(c.resellers.count??0));
       setText('orderCount',c.orders.error?'—':String(c.orders.count??0));
-      setText('topupCount',c.topups.error?'—':String(c.topups.count??0));
       setText('walletTotal',c.walletSummary.error?'—':safeMoney(c.walletSummary.data?.total_balance||0));
-
-      const topups=c.topups.error?0:num(c.topups.count);
-      const renewals=c.pendingRenewals.error?0:num(c.pendingRenewals.count);
-      const issues=c.openIssues.error?0:num(c.openIssues.count);
-      const processing=c.processing.error?0:num(c.processing.count);
-      const shahidOpen=c.shahid.error?0:Math.max(num(c.shahid.data?.openIncidents),num(c.shahid.data?.unknownPurchases));
-      setAttention('attentionShahid',shahidOpen,'critical');
-      setAttention('attentionTopups',topups,'warning');
-      setAttention('attentionRenewals',renewals,'warning');
-      setAttention('attentionSupport',issues,'warning');
-      setAttention('attentionOrders',processing,'warning');
-      setText('attentionTotal',String(shahidOpen+topups+renewals+issues+processing));
+      renderAttention(c);
       renderActivity(activity);
-      setText('dashboardLastUpdated',`Updated ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`);
     }catch(e){
       console.error('[SUBLY] dashboard control center',e);
       const box=qs('adminActivityFeed');if(box)box.innerHTML='<div class="dashboard-empty">Could not refresh dashboard activity. Try again.</div>';
@@ -106,5 +140,7 @@
   }
 
   window.refreshDashboardControl=refreshDashboardControl;
-  window.addEventListener('subly:admin-ready',refreshDashboardControl);
+  window.refreshDashboardAttention=refreshAttention;
+  window.addEventListener('subly:admin-ready',()=>{refreshDashboardControl();startAttentionPolling()});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAttention()});
 })();

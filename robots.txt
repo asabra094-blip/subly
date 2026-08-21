@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /reseller/
+Disallow: /en/reseller/
+Disallow: /ar/reseller/
+Disallow: /login.html
+Disallow: /admin.html
+Disallow: /reseller.html
+
+Sitemap: https://sublylb.com/sitemap.xml

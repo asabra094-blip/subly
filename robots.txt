@@ -4,8 +4,8 @@ Disallow: /admin/
 Disallow: /reseller/
 Disallow: /en/reseller/
 Disallow: /ar/reseller/
-Disallow: /login.html
 Disallow: /admin.html
 Disallow: /reseller.html
 
+# login.html stays crawlable so search engines can read its noindex directive.
 Sitemap: https://sublylb.com/sitemap.xml

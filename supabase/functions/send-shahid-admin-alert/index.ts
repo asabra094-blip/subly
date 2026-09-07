@@ -12,6 +12,7 @@ const subId = (order: any) =>
   (order?.id ? `SUB-${String(order.id).replaceAll("-", "").slice(0, 8).toUpperCase()}` : "—");
 const fullName = (customer: any) =>
   [customer?.first_name, customer?.last_name].filter(Boolean).join(" ").trim();
+const norm = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
 Deno.serve(async (req: Request) => {
   try {
@@ -35,7 +36,7 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
     const incidentId = String(body?.incidentId || "").trim();
-    const event = body?.event === "resolved" ? "resolved" : "opened";
+    const requestedEvent = String(body?.event || "opened").trim().toLowerCase();
     if (!incidentId) {
       return new Response(JSON.stringify({ ok: false, error: "incidentId is required" }), {
         status: 400,
@@ -54,11 +55,11 @@ Deno.serve(async (req: Request) => {
         headers: { "content-type": "application/json" },
       });
     }
-    if (event === "opened" && incident.resolved === true) {
-      return new Response(JSON.stringify({ ok: true, ignored: true, reason: "already_resolved" }), {
-        headers: { "content-type": "application/json" },
-      });
-    }
+
+    let event: "opened" | "resolved" | "notice" =
+      requestedEvent === "resolved" ? "resolved" : requestedEvent === "notice" ? "notice" : "opened";
+    // Safe pre-purchase failures are auto-resolved immediately after refund. They still need an admin notice.
+    if (event === "opened" && incident.resolved === true) event = "notice";
 
     const { data: order } = incident.order_id
       ? await service
@@ -84,13 +85,27 @@ Deno.serve(async (req: Request) => {
     const product: any = productResult.data;
     const customer: any = customerResult.data;
     const autoRetry = incident.metadata?.automaticRetry;
-    const severity = String(incident.severity || "warning").toLowerCase();
+    const severity = norm(incident.severity || "warning");
+    const code = norm(incident.code);
+    const detail = norm(incident.message);
+    const priceChanged = code === "supplier_price_increased" || detail.includes("supplier cost changed");
+    const insufficientBalance = code === "supplier_insufficient_balance" || detail.includes("insufficient balance");
 
     let headline = "⚠️ <b>HEADS UP — Shahid Automation</b>";
     let action = "Keep an eye on this order in the Shahid Control Center.";
+
     if (event === "resolved") {
       headline = "✅ <b>RESOLVED — Shahid Automation</b>";
       action = "No action is needed unless the order still looks wrong in the admin panel.";
+    } else if (event === "notice" && priceChanged) {
+      headline = "💸 <b>SHAHID SUPPLIER PRICE CHANGED</b>";
+      action = "Check the new TV Leb supplier price and update the saved supplier cost if it is correct. The reseller order was refunded safely.";
+    } else if (event === "notice" && insufficientBalance) {
+      headline = "💰 <b>SHAHID SUPPLIER BALANCE LOW</b>";
+      action = "Top up the TV Leb supplier balance before the next Shahid order. This reseller order was refunded safely.";
+    } else if (event === "notice") {
+      headline = "⚙️ <b>SHAHID AUTOMATION ERROR — SAFE REFUND</b>";
+      action = "Review the error details and fix the supplier/API configuration before the next order. The reseller order was refunded safely.";
     } else if (severity === "critical") {
       headline = "🚨 <b>CRITICAL — Shahid Needs Attention</b>";
       action = autoRetry === false
@@ -113,9 +128,11 @@ Deno.serve(async (req: Request) => {
       `<b>Code:</b> <code>${esc(incident.code)}</code>\n` +
       `<b>Details:</b> ${esc(incident.message)}${resolvedLine}\n\n` +
       `<b>${event === "resolved" ? "Status" : "Action"}:</b> ${esc(action)}` +
-      (event !== "resolved" && autoRetry === false
-        ? `\n\n🛡 <b>Safety lock:</b> Automatic retry is OFF for this incident. The reseller Shahid queue remains protected until the state is safely resolved.`
-        : "");
+      (event === "notice"
+        ? `\n\n🛡 <b>Safety:</b> Subly stopped this order and refunded the reseller instead of continuing with an unsafe supplier purchase.`
+        : event !== "resolved" && autoRetry === false
+          ? `\n\n🛡 <b>Safety lock:</b> Automatic retry is OFF for this incident. The reseller Shahid queue remains protected until the state is safely resolved.`
+          : "");
 
     const token = Deno.env.get("TELEGRAM_BOT_TOKEN") || Deno.env.get("Bottoken") || Deno.env.get("BOTTOKEN");
     const chatId = Deno.env.get("TELEGRAM_CHAT_ID") || Deno.env.get("Idtelegram") || Deno.env.get("IDTELEGRAM");
@@ -137,7 +154,7 @@ Deno.serve(async (req: Request) => {
     });
     if (!telegram.ok) throw new Error(`Telegram ${telegram.status}: ${await telegram.text()}`);
 
-    return new Response(JSON.stringify({ ok: true, event }), {
+    return new Response(JSON.stringify({ ok: true, event, category: priceChanged ? "price_changed" : insufficientBalance ? "insufficient_balance" : "general" }), {
       headers: { "content-type": "application/json" },
     });
   } catch (error) {

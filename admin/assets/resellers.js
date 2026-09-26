@@ -53,7 +53,7 @@ async function loadResellers(){
     const lifecycle=status==='archived'
       ?`<button class="action reseller-restore-action" onclick="restoreReseller('${r.id}')">Restore</button><button class="action reseller-delete-action" onclick="deleteReseller('${r.id}')">Delete</button>`
       :`<button class="action reseller-archive-action" onclick="archiveReseller('${r.id}')">Archive</button>`;
-    return `<div class="reseller-row"><div><div class="reseller-name">${label}</div><div class="reseller-sub">${username} ${r.reseller_code?`• ${escapeHtml(r.reseller_code)}`:''}</div></div><div><span class="badge ${escapeHtml(status)}">${escapeHtml(status)}</span></div><div><div class="reseller-name">${escapeHtml((r.tier||'bronze').toUpperCase())}</div><div class="reseller-sub">Wallet ${money(bal)}</div></div><div class="reseller-row-actions"><button class="action" onclick="openResellerManage('${r.id}')">Manage</button>${lifecycle}</div></div>`;
+    return `<div class="reseller-row"><div><div class="reseller-title-line"><div class="reseller-name">${label}</div><div class="reseller-wallet-pill" title="Current wallet balance">💰 <span>Wallet</span> <strong>${money(bal)}</strong></div></div><div class="reseller-sub">${username} ${r.reseller_code?`• ${escapeHtml(r.reseller_code)}`:''}</div></div><div><span class="badge ${escapeHtml(status)}">${escapeHtml(status)}</span></div><div><div class="reseller-name">${escapeHtml((r.tier||'bronze').toUpperCase())}</div><div class="reseller-sub">Pricing tier</div></div><div class="reseller-row-actions"><button class="action" onclick="openResellerManage('${r.id}')">Manage</button>${lifecycle}</div></div>`;
   }).join('')+resellerPager();
 }
 

@@ -1,6 +1,6 @@
 /* Subly admin reseller list — page-specific source of truth. */
 const RESELLER_PAGE_SIZE=25;
-let resellerPage=1,resellerTotal=0,resellerSearchTimer=null,managedResellerId=null,resellerLifecycleHooksInstalled=false;
+let resellerPage=1,resellerTotal=0,resellerSearchTimer=null,managedResellerId=null,resellerLifecycleHooksInstalled=false,selectedDebtUserId=null,resellerDebtById=new Map();
 
 (function loadResellerLifecycleStyles(){
   if(document.getElementById('subly-reseller-lifecycle-css'))return;
@@ -43,18 +43,49 @@ async function loadResellers(){
   if(error){console.error('[SUBLY] resellers',error);c.innerHTML=`<div class="empty">${escapeHtml(error.message||'Could not load resellers.')}</div>`;return}
   const rows=data||[];
   resellerTotal=count||0;
-  const ids=rows.map(x=>x.id),wr=ids.length?await supabaseClient.from('wallets').select('user_id,balance').in('user_id',ids):{data:[],error:null};
-  if(wr.error){console.error('[SUBLY] reseller wallets',wr.error);c.innerHTML=`<div class="empty">${escapeHtml(wr.error.message||'Could not load reseller wallet balances.')}</div>`;return}
-  const wallets=wr.data||[],info=document.getElementById('resellerPageInfo');
+  const ids=rows.map(x=>x.id),[wr,dr]=ids.length?await Promise.all([supabaseClient.from('wallets').select('user_id,balance').in('user_id',ids),supabaseClient.rpc('admin_cash_due_rows',{p_user_ids:ids})]):[{data:[],error:null},{data:[],error:null}];
+  if(wr.error||dr.error){const e=wr.error||dr.error;console.error('[SUBLY] reseller finance',e);c.innerHTML=`<div class="empty">${escapeHtml(e.message||'Could not load reseller finance balances.')}</div>`;return}
+  const wallets=wr.data||[];resellerDebtById=new Map((dr.data||[]).map(x=>[x.user_id,Number(x.cash_due||0)]));const info=document.getElementById('resellerPageInfo');
   if(info){const first=resellerTotal?from+1:0,last=Math.min(to+1,resellerTotal);info.textContent=resellerTotal?`${first}–${last} of ${resellerTotal}`:'0 resellers'}
   if(!rows.length){c.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div>No matching resellers.</div></div>'+resellerPager();return}
   c.innerHTML=rows.map(r=>{
-    const wallet=wallets.find(w=>w.user_id===r.id),bal=wallet?.balance??0,status=String(r.status||'unknown'),label=escapeHtml(r.business_name||r.username||'Unnamed reseller'),username=escapeHtml(r.username||'');
+    const wallet=wallets.find(w=>w.user_id===r.id),bal=wallet?.balance??0,debt=resellerDebtById.get(r.id)||0,status=String(r.status||'unknown'),label=escapeHtml(r.business_name||r.username||'Unnamed reseller'),username=escapeHtml(r.username||'');
     const lifecycle=status==='archived'
       ?`<button class="action reseller-restore-action" onclick="restoreReseller('${r.id}')">Restore</button><button class="action reseller-delete-action" onclick="deleteReseller('${r.id}')">Delete</button>`
       :`<button class="action reseller-archive-action" onclick="archiveReseller('${r.id}')">Archive</button>`;
-    return `<div class="reseller-row"><div><div class="reseller-title-line"><div class="reseller-name">${label}</div><div class="reseller-wallet-pill" title="Current wallet balance">💰 <span>Wallet</span> <strong>${money(bal)}</strong></div></div><div class="reseller-sub">${username} ${r.reseller_code?`• ${escapeHtml(r.reseller_code)}`:''}</div></div><div><span class="badge ${escapeHtml(status)}">${escapeHtml(status)}</span></div><div><div class="reseller-name">${escapeHtml((r.tier||'bronze').toUpperCase())}</div><div class="reseller-sub">Pricing tier</div></div><div class="reseller-row-actions"><button class="action" onclick="openResellerManage('${r.id}')">Manage</button>${lifecycle}</div></div>`;
+    return `<div class="reseller-row"><div><div class="reseller-title-line"><div class="reseller-name">${label}</div><div class="reseller-wallet-pill" title="Current wallet balance">💰 <span>Wallet</span> <strong>${money(bal)}</strong></div><button class="reseller-debt-pill" type="button" title="Adjust reseller debt" onclick="openResellerDebtAdjust('${r.id}')">🔴 <span>Debt</span> <strong>${money(debt)}</strong></button></div><div class="reseller-sub">${username} ${r.reseller_code?`• ${escapeHtml(r.reseller_code)}`:''}</div></div><div><span class="badge ${escapeHtml(status)}">${escapeHtml(status)}</span></div><div><div class="reseller-name">${escapeHtml((r.tier||'bronze').toUpperCase())}</div><div class="reseller-sub">Pricing tier</div></div><div class="reseller-row-actions"><button class="action" onclick="openResellerManage('${r.id}')">Manage</button><button class="action reseller-debt-action" onclick="openResellerDebtAdjust('${r.id}')">Adjust Debt</button>${lifecycle}</div></div>`;
   }).join('')+resellerPager();
+}
+
+function ensureResellerDebtModal(){
+  if(document.getElementById('resellerDebtModal'))return;
+  const m=document.createElement('div');m.id='resellerDebtModal';m.className='modal';
+  m.innerHTML='<div class="modal-card" style="max-width:520px"><div class="modal-head"><div><h2>Adjust Debt</h2><p id="resellerDebtTitle">Reseller</p></div><button class="modal-close" type="button" onclick="closeResellerDebtAdjust()">✕</button></div><div class="modal-body"><div class="order-summary-box reseller-debt-summary">Current debt: <strong id="resellerDebtCurrent">$0.00</strong></div><label>Adjustment (+ adds debt / - reduces debt)</label><input id="resellerDebtAmount" type="number" step="0.01" placeholder="Example: 20 or -10"><label>Reason</label><input id="resellerDebtReason" maxlength="500" placeholder="Required reason"><div id="resellerDebtMessage" class="manage-message"></div><button id="resellerDebtSubmit" class="modal-submit" type="button" onclick="submitResellerDebtAdjust()">Apply Debt Adjustment</button></div></div>';
+  document.body.appendChild(m);
+}
+function openResellerDebtAdjust(id){
+  const debt=Number(resellerDebtById.get(id)||0),row=[...document.querySelectorAll('.reseller-row')].find(x=>x.querySelector(`[onclick*="'${id}'"]`));
+  selectedDebtUserId=id;ensureResellerDebtModal();
+  document.getElementById('resellerDebtTitle').textContent=row?.querySelector('.reseller-name')?.textContent||'Reseller';
+  document.getElementById('resellerDebtCurrent').textContent=money(debt);
+  document.getElementById('resellerDebtAmount').value='';
+  document.getElementById('resellerDebtReason').value='';
+  const msg=document.getElementById('resellerDebtMessage');msg.textContent='';msg.className='manage-message';
+  document.getElementById('resellerDebtModal').classList.add('show');
+  setTimeout(()=>document.getElementById('resellerDebtAmount')?.focus(),60);
+}
+function closeResellerDebtAdjust(){document.getElementById('resellerDebtModal')?.classList.remove('show');selectedDebtUserId=null}
+async function submitResellerDebtAdjust(){
+  if(!selectedDebtUserId)return;
+  const amount=Number(document.getElementById('resellerDebtAmount').value),reason=document.getElementById('resellerDebtReason').value.trim(),current=Number(resellerDebtById.get(selectedDebtUserId)||0),msg=document.getElementById('resellerDebtMessage'),btn=document.getElementById('resellerDebtSubmit');
+  if(!Number.isFinite(amount)||amount===0){msg.textContent='Enter a non-zero adjustment. Positive adds debt; negative reduces it.';msg.className='manage-message error';return}
+  if(current+amount<0){msg.textContent='Debt cannot go below $0.00.';msg.className='manage-message error';return}
+  if(reason.length<3){msg.textContent='Enter a clear reason (at least 3 characters).';msg.className='manage-message error';return}
+  if(!confirm(`Adjust debt by ${amount>0?'+':''}${money(amount)}? Wallet balance will not change.`))return;
+  btn.disabled=true;btn.textContent='Applying…';
+  try{const{data,error}=await supabaseClient.rpc('admin_adjust_cash_due',{p_user_id:selectedDebtUserId,p_amount:amount,p_note:reason});if(error)throw error;msg.textContent=`Debt updated. New debt: ${money(data?.new_due||0)}`;msg.className='manage-message success';await loadResellers();setTimeout(closeResellerDebtAdjust,500)}
+  catch(e){msg.textContent=e.message||'Could not adjust debt.';msg.className='manage-message error'}
+  finally{btn.disabled=false;btn.textContent='Apply Debt Adjustment'}
 }
 
 async function getResellerLifecycleProfile(id){
@@ -82,9 +113,9 @@ function restoreReseller(id){return setResellerArchived(id,false)}
 
 function resellerHistorySummary(check){
   const parts=[];
-  const values=[['orders',check?.orders],['customers',check?.customers],['renewals',check?.renewals],['wallet transactions',check?.wallet_transactions],['top-ups',check?.topups],['support issues',check?.support_issues],['contact tickets',check?.contact_tickets],['Telegram connection',check?.telegram_connections],['notifications',check?.notifications]];
+  const values=[['orders',check?.orders],['customers',check?.customers],['renewals',check?.renewals],['wallet transactions',check?.wallet_transactions],['top-ups',check?.topups],['debt ledger entries',check?.cash_ledger],['support issues',check?.support_issues],['contact tickets',check?.contact_tickets],['Telegram connection',check?.telegram_connections],['notifications',check?.notifications]];
   for(const[label,value]of values)if(Number(value||0)>0)parts.push(`${value} ${label}`);
-  if(Number(check?.wallet_balance||0)!==0)parts.push(`wallet balance ${money(check.wallet_balance)}`);
+  if(Number(check?.wallet_balance||0)!==0)parts.push(`wallet balance ${money(check.wallet_balance)}`);if(Number(check?.cash_due||0)!==0)parts.push(`debt ${money(check.cash_due)}`);
   return parts.join(', ');
 }
 async function deleteReseller(id){

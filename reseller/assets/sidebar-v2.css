@@ -14,9 +14,13 @@
 #resellerSidebar .account-box{display:grid;grid-template-columns:minmax(0,1fr) 94px;grid-template-rows:auto auto auto auto;column-gap:8px;row-gap:6px;padding:10px;border:1px solid rgba(255,255,255,.075);border-radius:14px;background:linear-gradient(145deg,rgba(26,21,34,.78),rgba(14,11,19,.88));box-shadow:0 12px 32px rgba(0,0,0,.13);overflow:hidden}
 #resellerSidebar .account-name{grid-column:1;grid-row:1;align-self:end;min-width:0;font-size:11.5px;font-weight:850;color:#f4eff8;line-height:1.25}
 #resellerSidebar .account-tier{grid-column:1;grid-row:2;align-self:start;margin:0;color:#898190;font-size:8.5px;line-height:1.25;letter-spacing:.035em}
-#resellerSidebar .sidebar-balance{grid-column:2;grid-row:1 / span 2;align-self:stretch;display:flex;flex-direction:column;justify-content:center;margin:0;padding:7px 8px;border:1px solid rgba(169,108,255,.15);border-radius:10px;background:linear-gradient(145deg,rgba(169,108,255,.085),rgba(239,91,174,.035));min-width:0}
-#resellerSidebar .sidebar-balance span{font-size:7.5px;line-height:1.2;color:#8f8797;letter-spacing:.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#resellerSidebar .sidebar-balance strong{margin-top:3px;font-size:13px;line-height:1.1;letter-spacing:-.02em;color:#f4eff8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#resellerSidebar .sidebar-balance{grid-column:2;grid-row:1 / span 2;align-self:stretch;display:flex;flex-direction:column;justify-content:center;margin:0;padding:0;border:1px solid rgba(169,108,255,.15);border-radius:10px;background:linear-gradient(145deg,rgba(169,108,255,.07),rgba(239,91,174,.025));min-width:0;overflow:hidden}
+#resellerSidebar .sidebar-balance-debt{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:5px 7px;border-bottom:1px solid rgba(255,117,136,.14);background:rgba(255,117,136,.055)}
+#resellerSidebar .sidebar-balance-debt span{min-width:0;color:#d9909b;font-size:7px;font-weight:850;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#resellerSidebar .sidebar-balance-debt strong{flex:0 0 auto;color:#ff8fa0;font-size:10px;font-weight:900;line-height:1.1;letter-spacing:-.02em;white-space:nowrap}
+#resellerSidebar .sidebar-balance-main{padding:6px 8px 7px;min-width:0}
+#resellerSidebar .sidebar-balance-main span{display:block;font-size:7.5px;line-height:1.2;color:#8f8797;letter-spacing:.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#resellerSidebar .sidebar-balance-main strong{display:block;margin-top:3px;font-size:13px;line-height:1.1;letter-spacing:-.02em;color:#f4eff8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #resellerSidebar .language-toggle,#resellerSidebar .theme-toggle{grid-row:3;min-width:0;width:100%;min-height:37px;margin:2px 0 0;padding:6px 7px;border-radius:9px;gap:5px;border:1px solid rgba(255,255,255,.075);background:rgba(255,255,255,.025);box-shadow:inset 0 1px 0 rgba(255,255,255,.018);font-size:10px;font-weight:790;transition:transform .16s ease,border-color .16s ease,background .16s ease}
 #resellerSidebar .language-toggle{grid-column:1}
 #resellerSidebar .theme-toggle{grid-column:2}
@@ -55,13 +59,16 @@ html[dir=rtl] #resellerSidebar .theme-switch{direction:ltr!important}
 [data-theme=light] #resellerSidebar .account-name{color:#251b2d}
 [data-theme=light] #resellerSidebar .account-tier{color:#756b7e}
 [data-theme=light] #resellerSidebar .sidebar-balance{background:linear-gradient(145deg,#eee7f7,#faf7fc)!important;border-color:#d8cce4!important;box-shadow:none!important}
-[data-theme=light] #resellerSidebar .sidebar-balance span{color:#756b7e!important}
-[data-theme=light] #resellerSidebar .sidebar-balance strong{color:#251b2d!important}
+[data-theme=light] #resellerSidebar .sidebar-balance-main span{color:#756b7e!important}
+[data-theme=light] #resellerSidebar .sidebar-balance-main strong{color:#251b2d!important}
+[data-theme=light] #resellerSidebar .sidebar-balance-debt{background:#fff1f3!important;border-bottom-color:#f0c9d0!important}
+[data-theme=light] #resellerSidebar .sidebar-balance-debt span{color:#a85b68!important}
+[data-theme=light] #resellerSidebar .sidebar-balance-debt strong{color:#bd3650!important}
 [data-theme=light] #resellerSidebar .language-toggle,[data-theme=light] #resellerSidebar .theme-toggle{background:#f1ecf5!important;color:#5e5367!important;border-color:#d9d0e2!important;box-shadow:none}
 [data-theme=light] #resellerSidebar .language-toggle:hover,[data-theme=light] #resellerSidebar .theme-toggle:hover{background:#e9e1f0!important;color:#32253b!important;border-color:#cfc1da!important}
 [data-theme=light] #resellerSidebar .logout{background:#fbf1f3!important;color:#8c6870!important;border-color:#ecd7dc!important}
 [data-theme=light] #resellerSidebar .logout:hover{background:#f9e7eb!important;color:#ba5366!important;border-color:#e8c4cc!important}
 html[dir=rtl][data-theme=light] #resellerSidebar.sidebar{box-shadow:-18px 0 50px rgba(55,38,69,.065)}
 @media(max-height:720px) and (min-width:761px){#resellerSidebar.sidebar{padding-top:10px;padding-bottom:9px}#resellerSidebar .brand{min-height:60px;margin-bottom:5px;padding-bottom:9px}#resellerSidebar .brand-logo{width:48px!important;height:48px!important;flex-basis:48px!important}#resellerSidebar .nav{gap:2px}#resellerSidebar .nav-btn{min-height:36px}#resellerSidebar .sidebar-bottom{padding-top:5px}#resellerSidebar .account-box{padding:8px;row-gap:4px}#resellerSidebar .language-toggle,#resellerSidebar .theme-toggle{min-height:33px}#resellerSidebar .logout{min-height:32px}}
-@media(max-width:760px){#resellerSidebar.sidebar{width:min(86vw,292px);padding:14px 12px 12px}#resellerSidebar .brand{min-height:70px}#resellerSidebar .account-box{grid-template-columns:minmax(0,1fr) 102px}#resellerSidebar .nav-btn{min-height:42px;font-size:12px}.sidebar-backdrop{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}}
+@media(max-width:760px){#resellerSidebar.sidebar{width:min(86vw,292px);padding:14px 12px 12px}#resellerSidebar .brand{min-height:70px}#resellerSidebar .account-box{grid-template-columns:minmax(0,1fr) 100px;row-gap:5px;padding:9px}#resellerSidebar .sidebar-balance-debt{padding:5px 6px}#resellerSidebar .sidebar-balance-main{padding:6px 7px}#resellerSidebar .nav-btn{min-height:42px;font-size:12px}.sidebar-backdrop{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}}
 @media(prefers-reduced-motion:reduce){#resellerSidebar .nav-btn,#resellerSidebar .language-toggle,#resellerSidebar .theme-toggle,#resellerSidebar .logout,#resellerSidebar .theme-switch span{transition:none!important}}

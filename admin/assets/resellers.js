@@ -17,13 +17,14 @@ function ensureResellerToolbar(){
   const bar=document.createElement('div');
   bar.id='resellerToolbar';
   bar.className='reseller-toolbar';
-  bar.innerHTML='<div class="reseller-toolbar-main"><input id="resellerSearch" type="search" placeholder="Search reseller, business or Payment ID…"><select id="resellerStatusFilter" aria-label="Filter resellers"><option value="current">Current resellers</option><option value="archived">Archived</option><option value="all">All resellers</option></select></div><span id="resellerPageInfo" class="reseller-page-info"></span>';
+  bar.innerHTML='<div class="reseller-toolbar-main"><input id="resellerSearch" type="search" placeholder="Search reseller, business or Payment ID…"><select id="resellerStatusFilter" aria-label="Filter resellers"><option value="current">Current resellers</option><option value="archived">Archived</option><option value="all">All resellers</option></select><select id="resellerSortFilter" aria-label="Sort resellers"><option value="debt_desc" selected>Debt: Highest → Lowest</option><option value="debt_asc">Debt: Lowest → Highest</option><option value="newest">Newest first</option><option value="name">Name A → Z</option></select></div><span id="resellerPageInfo" class="reseller-page-info"></span>';
   body.insertBefore(bar,list);
   document.getElementById('resellerSearch').addEventListener('input',()=>{
     clearTimeout(resellerSearchTimer);
     resellerSearchTimer=setTimeout(()=>{resellerPage=1;loadResellers()},250);
   });
   document.getElementById('resellerStatusFilter').addEventListener('change',()=>{resellerPage=1;loadResellers()});
+  document.getElementById('resellerSortFilter').addEventListener('change',()=>{resellerPage=1;loadResellers()});
 }
 function safeResellerSearch(v){return String(v||'').trim().replace(/[,%()"']/g,' ').replace(/\s+/g,' ').slice(0,80)}
 function resellerPager(){const pages=Math.max(1,Math.ceil(resellerTotal/RESELLER_PAGE_SIZE));return `<div class="list-pager reseller-pager"><button class="action" ${resellerPage<=1?'disabled':''} onclick="changeResellerPage(-1)">← Previous</button><span>Page ${resellerPage} of ${pages}</span><button class="action" ${resellerPage>=pages?'disabled':''} onclick="changeResellerPage(1)">Next →</button></div>`}
@@ -34,22 +35,17 @@ async function loadResellers(){
   if(!c||!currentAdminUser)return;
   ensureResellerToolbar();
   c.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div>Loading resellers...</div></div>';
-  const from=(resellerPage-1)*RESELLER_PAGE_SIZE,to=from+RESELLER_PAGE_SIZE-1,q=safeResellerSearch(document.getElementById('resellerSearch')?.value),filter=document.getElementById('resellerStatusFilter')?.value||'current';
-  let req=supabaseClient.from('profiles').select('id,username,business_name,reseller_code,tier,status,created_at',{count:'exact'}).eq('role','reseller').order('created_at',{ascending:false}).range(from,to);
-  if(filter==='archived')req=req.eq('status','archived');
-  else if(filter==='current')req=req.neq('status','archived');
-  if(q)req=req.or(`username.ilike.%${q}%,business_name.ilike.%${q}%,reseller_code.ilike.%${q}%`);
-  const{data,error,count}=await req;
+  const q=safeResellerSearch(document.getElementById('resellerSearch')?.value),filter=document.getElementById('resellerStatusFilter')?.value||'current',sort=document.getElementById('resellerSortFilter')?.value||'debt_desc';
+  const{data,error}=await supabaseClient.rpc('admin_reseller_rows',{p_search:q||null,p_status_filter:filter,p_sort:sort,p_page:resellerPage,p_page_size:RESELLER_PAGE_SIZE});
   if(error){console.error('[SUBLY] resellers',error);c.innerHTML=`<div class="empty">${escapeHtml(error.message||'Could not load resellers.')}</div>`;return}
   const rows=data||[];
-  resellerTotal=count||0;
-  const ids=rows.map(x=>x.id),[wr,dr]=ids.length?await Promise.all([supabaseClient.from('wallets').select('user_id,balance').in('user_id',ids),supabaseClient.rpc('admin_cash_due_rows',{p_user_ids:ids})]):[{data:[],error:null},{data:[],error:null}];
-  if(wr.error||dr.error){const e=wr.error||dr.error;console.error('[SUBLY] reseller finance',e);c.innerHTML=`<div class="empty">${escapeHtml(e.message||'Could not load reseller finance balances.')}</div>`;return}
-  const wallets=wr.data||[];resellerDebtById=new Map((dr.data||[]).map(x=>[x.user_id,Number(x.cash_due||0)]));const info=document.getElementById('resellerPageInfo');
+  resellerTotal=Number(rows[0]?.total_count||0);
+  resellerDebtById=new Map(rows.map(x=>[x.id,Number(x.cash_due||0)]));
+  const info=document.getElementById('resellerPageInfo'),from=(resellerPage-1)*RESELLER_PAGE_SIZE,to=from+RESELLER_PAGE_SIZE-1;
   if(info){const first=resellerTotal?from+1:0,last=Math.min(to+1,resellerTotal);info.textContent=resellerTotal?`${first}–${last} of ${resellerTotal}`:'0 resellers'}
   if(!rows.length){c.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div>No matching resellers.</div></div>'+resellerPager();return}
   c.innerHTML=rows.map(r=>{
-    const wallet=wallets.find(w=>w.user_id===r.id),bal=wallet?.balance??0,debt=resellerDebtById.get(r.id)||0,status=String(r.status||'unknown'),label=escapeHtml(r.business_name||r.username||'Unnamed reseller'),username=escapeHtml(r.username||'');
+    const bal=Number(r.wallet_balance||0),debt=Number(r.cash_due||0),status=String(r.status||'unknown'),label=escapeHtml(r.business_name||r.username||'Unnamed reseller'),username=escapeHtml(r.username||'');
     const lifecycle=status==='archived'
       ?`<button class="action reseller-restore-action" onclick="restoreReseller('${r.id}')">Restore</button><button class="action reseller-delete-action" onclick="deleteReseller('${r.id}')">Delete</button>`
       :`<button class="action reseller-archive-action" onclick="archiveReseller('${r.id}')">Archive</button>`;

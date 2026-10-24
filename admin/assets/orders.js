@@ -14,15 +14,12 @@ function adminRenewalIdentity(o,p){
   return{label:'Account to renew',value:o?.delivery_account||o?.delivery_profile||o?.customer_profile_name||'—'};
 }
 function adminExpectedRenewalExpiry(baseValue,duration){
-  if(!baseValue)return null;
-  const d=new Date(baseValue);if(Number.isNaN(d.getTime()))return null;
-  const s=String(duration||'').trim().toLowerCase(),n=Number(s.match(/[\d.]+/)?.[0]||0);
-  if(!n||!Number.isFinite(n))return null;
-  if(s.includes('year'))d.setFullYear(d.getFullYear()+n);
-  else if(s.includes('month'))d.setMonth(d.getMonth()+n);
-  else if(s.includes('week'))d.setDate(d.getDate()+(n*7));
-  else if(s.includes('day'))d.setDate(d.getDate()+n);
-  else return null;
+  const stored=new Date(baseValue),now=new Date();
+  if(Number.isNaN(stored.getTime()))return null;
+  const base=stored>now?stored:now,s=String(duration||'').trim().toLowerCase(),n=Number(s.match(/[0-9]+/)?.[0]||0);
+  if(!n||!Number.isFinite(n)||(!s.includes('month')&&!s.includes('year')))return null;
+  const months=s.includes('year')?n*12:n,day=base.getUTCDate(),targetMonth=base.getUTCMonth()+months,targetYear=base.getUTCFullYear()+Math.floor(targetMonth/12),month=((targetMonth%12)+12)%12,lastDay=new Date(Date.UTC(targetYear,month+1,0)).getUTCDate();
+  const d=new Date(base);d.setUTCFullYear(targetYear,month,Math.min(day,lastDay));
   return d.toISOString();
 }
 function adminOrderLogo(p){return p?.logo_url?`<img class="admin-order-logo" src="${escapeHtml(p.logo_url)}" alt="${escapeHtml(p.app_name||'Subscription')}">`:`<div class="admin-order-logo admin-order-fallback">${escapeHtml((p?.app_name||'S').slice(0,1).toUpperCase())}</div>`}

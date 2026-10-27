@@ -48,5 +48,10 @@ async function logout(){await supabaseClient.auth.signOut();location.replace("/l
 function openMobileMenu(){if(innerWidth>760)return;document.body.classList.add("menu-open");document.getElementById("menuToggle")?.setAttribute("aria-expanded","true")}
 function closeMobileMenu(){document.body.classList.remove("menu-open");document.getElementById("menuToggle")?.setAttribute("aria-expanded","false")}
 function toggleMobileMenu(){document.body.classList.contains("menu-open")?closeMobileMenu():openMobileMenu()}
-document.addEventListener("keydown",event=>{if(event.key==="Escape"){closeMobileMenu();closeTopupModal()}});addEventListener("resize",()=>{if(innerWidth>760)closeMobileMenu()});document.querySelectorAll(".nav-btn").forEach(link=>link.addEventListener("click",()=>{if(innerWidth<=760)closeMobileMenu()}));
+function ensureSettingsNav(){
+  const nav=document.querySelector('#resellerSidebar .nav');if(!nav||nav.querySelector('a[href="settings.html"]'))return;
+  const a=document.createElement('a');a.className='nav-btn'+(CURRENT_RESELLER_PAGE==='settings'?' active':'');a.href='settings.html';a.innerHTML=`⚙️ <span class="nav-text">${rar()?'الإعدادات':'Settings'}</span>`;
+  nav.appendChild(a);
+}
+document.addEventListener("keydown",event=>{if(event.key==="Escape"){closeMobileMenu();closeTopupModal()}});addEventListener("resize",()=>{if(innerWidth>760)closeMobileMenu()});ensureSettingsNav();document.querySelectorAll(".nav-btn").forEach(link=>link.addEventListener("click",()=>{if(innerWidth<=760)closeMobileMenu()}));
 checkReseller();

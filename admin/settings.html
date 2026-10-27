@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subly | Admin Settings</title>
+  <link rel="icon" type="image/png" href="../subly-logo.png.PNG">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="assets/admin.css">
+  <link rel="stylesheet" href="assets/admin-responsive.css">
+  <link rel="stylesheet" href="../portal-readability.css">
+  <link rel="stylesheet" href="assets/settings.css?v=20261027-1">
+</head>
+<body data-page="settings">
+<div id="loadingScreen"><div class="loader-box"><img src="../subly-logo.png.PNG" class="loader-logo" alt="Subly"><p id="loadingText">Checking admin access...</p></div></div>
+<div id="app">
+  <aside class="sidebar" id="adminSidebar">
+    <div class="brand"><img src="../subly-logo.png.PNG" class="brand-logo" alt="Subly"><div class="brand-sub">ADMIN CONTROL</div></div>
+    <nav class="nav">
+      <a class="nav-btn" href="index.html">🏠 <span class="nav-text">Dashboard</span></a>
+      <a class="nav-btn" href="resellers.html">👥 <span class="nav-text">Resellers</span></a>
+      <a class="nav-btn" href="wallets.html">💰 <span class="nav-text">Wallets</span></a>
+      <a class="nav-btn" href="topups.html">💳 <span class="nav-text">Top-up Requests</span></a>
+      <a class="nav-btn" href="orders.html">🛒 <span class="nav-text">Orders</span></a>
+      <a class="nav-btn" href="support.html">🛟 <span class="nav-text">Support</span></a>
+      <a class="nav-btn" href="products.html">📦 <span class="nav-text">Products</span></a>
+      <a class="nav-btn" href="pricing.html">💵 <span class="nav-text">Pricing</span></a>
+      <a class="nav-btn" href="transactions.html">📜 <span class="nav-text">Transactions</span></a>
+    </nav>
+    <div class="sidebar-bottom"><div class="admin-box"><div class="admin-name" id="adminName">Administrator</div><div class="admin-role">Subly Admin</div><button class="logout" onclick="logout()">↪ <span class="nav-text">Logout</span></button></div></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileMenu()"></div>
+  <main class="main">
+    <header class="topbar"><div class="topbar-left"><button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation" aria-controls="adminSidebar" aria-expanded="false" onclick="toggleMobileMenu()">☰</button><div class="page-title">Settings</div></div><div class="status"><span class="dot"></span>System online</div></header>
+    <div class="content"><section class="page active"><div class="admin-settings-wrap">
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Admin Account</div><div class="panel-sub">Manage your Subly administrator security</div></div></div>
+        <div class="panel-body">
+          <div class="admin-settings-account"><div><span>Username</span><strong id="adminSettingsUsername">Administrator</strong></div><div><span>Role</span><strong id="adminSettingsRole">Admin</strong></div></div>
+          <div class="admin-settings-note"><div class="admin-settings-icon">🔐</div><div><strong>Your current password cannot be displayed</strong>Supabase Auth stores passwords securely as one-way hashes, so Subly cannot read or reveal the existing password. Enter it below to verify your identity before changing it.</div></div>
+          <form id="adminPasswordForm" class="admin-settings-form" autocomplete="off">
+            <div class="admin-settings-field"><label for="adminCurrentPassword">Current Password</label><input id="adminCurrentPassword" type="password" autocomplete="current-password" required></div>
+            <div class="admin-settings-field"><label for="adminNewPassword">New Password</label><input id="adminNewPassword" type="password" autocomplete="new-password" minlength="8" required><div class="admin-settings-hint">Use at least 8 characters. Longer passwords with letters, numbers and symbols are safer.</div><div class="admin-settings-strength"><span id="adminPasswordStrengthBar" data-score="0"></span></div><div class="admin-settings-strength-label" id="adminPasswordStrengthLabel"></div></div>
+            <div class="admin-settings-field"><label for="adminConfirmPassword">Confirm New Password</label><input id="adminConfirmPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+            <label class="admin-settings-show"><input id="adminShowPasswords" type="checkbox"> Show entered passwords</label>
+            <div id="adminPasswordMessage" class="admin-settings-message" aria-live="polite"></div>
+            <button id="adminChangePasswordButton" class="admin-settings-submit" type="submit">Change Password</button>
+          </form>
+        </div>
+      </div>
+    </div></section></div>
+  </main>
+</div>
+<script src="assets/admin.js?v=20261027-1"></script>
+<script src="assets/settings.js?v=20261027-1"></script>
+</body>
+</html>
